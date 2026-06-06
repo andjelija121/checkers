@@ -68,8 +68,8 @@ class Tabla:
 
         vreme = pygame.time.get_ticks()
         puls = int(3 + 2 * abs((vreme % 900) / 450 - 1))
-
-        for indeks in self.validni_potezi(self.izabrana_figura):
+        validni, *_=self.validni_potezi(self.izabrana_figura)
+        for indeks in validni:
             red, kolona = self.indeks_u_red_kolonu(indeks)
             x = kolona * SQUARE_SIZE + SQUARE_SIZE // 2
             y = red * SQUARE_SIZE + SQUARE_SIZE // 2
@@ -99,6 +99,7 @@ class Tabla:
         return self.tabla[indeks]
 
     def izaberi(self, red, kolona):
+
         indeks = self.red_kolona_u_indeks(red, kolona)
         figura = self.uzmi_figuru(red, kolona)
 
@@ -111,11 +112,26 @@ class Tabla:
             return True
 
         if self.izabrana_figura is not None and indeks is not None:
-
-            if indeks not in self.validni_potezi(self.izabrana_figura):
+            validni,pojedeni1,pojedeni2 = self.validni_potezi(self.izabrana_figura)
+            if indeks not in validni:
                 return False
+            if pojedeni1 is None:
+                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
 
-            pomereno = self.pomeri(self.izabrana_figura, red, kolona)
+            elif pojedeni2 is None:
+                for p in pojedeni1:
+                    self.tabla[p] = None
+                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
+
+            elif indeks == validni[0]:
+                for p in pojedeni1:
+                    self.tabla[p] = None
+                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
+            else:
+                for p in pojedeni2:
+                    self.tabla[p] = None
+                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
+
 
             if pomereno:
                 self.izabrana_figura = None
@@ -126,6 +142,9 @@ class Tabla:
 
     def validni_potezi(self,figura):
         validni=[]
+        moranje = False
+        pojedeni=[]
+        pojedeni2=[]
         if figura is None:
             return False
         
@@ -143,11 +162,28 @@ class Tabla:
             novi_red= red_smer+red
             nova_kolona= kolona_smer+kolona
             novi_indeks = self.red_kolona_u_indeks(novi_red,nova_kolona)
-            if novi_indeks is not None and self.tabla[novi_indeks] is None:
-                validni.append(novi_indeks)
-            else:
+            if novi_indeks is None:
                 continue
-        return validni
+            if novi_indeks is not None and self.tabla[novi_indeks] is None and not moranje:
+                validni.append(novi_indeks)
+            elif self.tabla[novi_indeks] is not None:
+                if not moranje:
+                    skok = self.jedi(novi_indeks,red_smer,kolona_smer,pojedeni)
+                else:
+                    skok = self.jedi(novi_indeks,red_smer,kolona_smer,pojedeni2)
+                if skok is None:
+                    pojedeni2=pojedeni=None
+
+                if skok is not None:
+                    if not moranje:
+                        validni=[]
+                    moranje=True
+                    validni.append(skok)
+
+        if moranje is True and len(validni) >1:
+            return validni,pojedeni,pojedeni2
+        else:
+            return validni,pojedeni,None
 
     def pomeri(self,figura,red,kolona):
         indeks = self.red_kolona_u_indeks(figura.row,figura.col)
@@ -159,3 +195,20 @@ class Tabla:
         if red==0:
             figura.postani_kraljevic()
         return True
+
+    def jedi(self,indeks,smer_r,smer_k,pojedeni):
+        if self.tabla[indeks] is None:
+            return indeks
+        else:
+            if self.tabla[indeks] is not None and self.tabla[indeks].color ==WHITE:
+                return None
+            pojedeni.append(indeks)
+            red,kolona = self.indeks_u_red_kolonu(indeks)
+            red += smer_r
+            kolona+=smer_k
+            indeks = self.red_kolona_u_indeks(red,kolona)
+            if indeks is None:
+                return None
+            
+            
+            return self.jedi(indeks,smer_r,smer_k,pojedeni)
