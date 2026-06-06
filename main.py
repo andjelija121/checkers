@@ -1,39 +1,39 @@
 import pygame
 from constants import WIDTH, HEIGHT, SQUARE_SIZE
-from board import Board
+from board import Tabla
 
 
 pygame.init()
 
-WIN = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Junački megdan")
+PROZOR = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Junacki megdan")
 
 
-def get_row_col_from_mouse(pos):
+def uzmi_red_kolonu_od_misa(pos):
     x, y = pos
-    row = y // SQUARE_SIZE
-    col = x // SQUARE_SIZE
-    return row, col
+    red = y // SQUARE_SIZE
+    kolona = x // SQUARE_SIZE
+    return red, kolona
 
 
 def main():
-    run = True
-    clock = pygame.time.Clock()
-    board = Board()
+    radi = True
+    sat = pygame.time.Clock()
+    tabla = Tabla()
 
-    while run:
-        clock.tick(60)
+    while radi:
+        sat.tick(60)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                run = False
+                radi = False
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                row, col = get_row_col_from_mouse(pos)
-                board.select(row, col)
+                red, kolona = uzmi_red_kolonu_od_misa(pos)
+                tabla.izaberi(red, kolona)
 
-        board.draw(WIN)
+        tabla.nacrtaj(PROZOR)
         pygame.display.update()
 
     pygame.quit()
