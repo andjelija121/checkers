@@ -1,6 +1,6 @@
 import pygame
-from constants import WIDTH, HEIGHT, SQUARE_SIZE
-from board import Tabla
+from konstante import WIDTH, HEIGHT, SQUARE_SIZE
+from tabla import Tabla
 
 
 pygame.init()

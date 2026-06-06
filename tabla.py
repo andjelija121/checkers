@@ -1,5 +1,5 @@
 import pygame
-from constants import ROWS, COLS, SQUARE_SIZE, BROWN, BEIGE, WHITE, BLACK, GREEN, GOLD, LIGHT_GOLD
+from konstante import ROWS, COLS, SQUARE_SIZE, BROWN, BEIGE, WHITE, BLACK, GREEN, GOLD, LIGHT_GOLD
 from figura import Figura
 
 
@@ -102,6 +102,10 @@ class Tabla:
         indeks = self.red_kolona_u_indeks(red, kolona)
         figura = self.uzmi_figuru(red, kolona)
 
+        if figura == self.izabrana_figura:
+            self.izabrana_figura = None
+            return True
+
         if figura is not None:
             self.izabrana_figura = figura
             return True
@@ -152,4 +156,6 @@ class Tabla:
         self.tabla[novi_indeks]=figura
         figura.row=red
         figura.col=kolona
+        if red==0:
+            figura.postani_kraljevic()
         return True
