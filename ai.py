@@ -67,6 +67,8 @@ class Ai:
         else:
             if maxFigura:
                 potezi = svi_potezi(tabla,BLACK)
+                if not potezi:
+                    return self.evaluacija(tabla)
                 maximum = -inf
                 
                 for potez in potezi:
@@ -76,6 +78,8 @@ class Ai:
                 return maximum
             else:
                 potezi = svi_potezi(tabla,WHITE)
+                if not potezi:
+                    return self.evaluacija(tabla)
                 minimum = inf
 
                 for potez in potezi:

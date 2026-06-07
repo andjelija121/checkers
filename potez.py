@@ -3,4 +3,4 @@ class Potez:
         self.figura = figura
         self.pocetni_indeks = pocetni_indeks
         self.krajnji_indeks = krajnji_indeks
-        self.pojedeni = pojedeni or []
+        self.pojedeni = pojedeni or {}

@@ -4,7 +4,7 @@ from potez import Potez
 def validni_potezi(tabla, figura):
     validni = []
     moranje = False
-    pojedeni = []
+    pojedeni = {}
     jedeni=[]
     if figura is None:
         return False
@@ -30,13 +30,10 @@ def validni_potezi(tabla, figura):
         if novi_indeks is not None and tabla.tabla[novi_indeks] is None and not moranje:
             validni.append(novi_indeks)
         elif tabla.tabla[novi_indeks] is not None:
-            skok = jedi(tabla, novi_indeks, red_smer, kolona_smer, pojedeni,figura.color,jedeni)
-            if skok is None:
-                for j in jedeni:
-                    pojedeni.remove(j)
-                jedeni=[]
-
+            jedeni=[]
+            skok = jedi(tabla, novi_indeks, red_smer, kolona_smer, jedeni,figura.color,jedeni)
             if skok is not None:
+                pojedeni[skok]=jedeni
                 if not moranje:
                     validni = []
                 moranje = True
@@ -53,7 +50,6 @@ def jedi(tabla, indeks, smer_r, smer_k, pojedeni,boja,jedeni):
         if tabla.tabla[indeks] is not None and tabla.tabla[indeks].color == boja:
             return None
         jedeni.append(indeks)
-        pojedeni.append(indeks)
         red, kolona = tabla.indeks_u_red_kolonu(indeks)
         red += smer_r
         kolona += smer_k
@@ -73,5 +69,5 @@ def svi_potezi(tabla,boja):
             validni,pojedeni = validni_potezi(tabla,polje)
             for v in validni:
                 indeks = tabla.red_kolona_u_indeks(polje.row,polje.col)
-                svi_potezi.append(Potez(polje,indeks,v,pojedeni))
+                svi_potezi.append(Potez(polje,indeks,v,pojedeni.get(v,[])))
     return svi_potezi

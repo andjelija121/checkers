@@ -63,14 +63,13 @@ class Tabla:
             return True
 
         if self.izabrana_figura is not None and indeks is not None:
-            validni,pojedeni = pravila.validni_potezi(self, self.izabrana_figura)
+            validni,pojedeni_po_skoku = pravila.validni_potezi(self, self.izabrana_figura)
+
             if indeks not in validni:
                 return False
-            if not pojedeni:
-                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
-            else:
-                pomereno = self.pomeri(self.izabrana_figura, red, kolona,pojedeni)
-
+            pojedeni = pojedeni_po_skoku.get(indeks, [])
+            pomereno = self.pomeri(self.izabrana_figura, red, kolona, pojedeni)
+            
             if pomereno:
                 self.izabrana_figura = None
 
