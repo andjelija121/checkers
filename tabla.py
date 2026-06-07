@@ -1,12 +1,13 @@
-import pygame
-from konstante import ROWS, COLS, SQUARE_SIZE, BROWN, BEIGE, WHITE, BLACK, GREEN, GOLD, LIGHT_GOLD
+from konstante import ROWS, COLS, WHITE, BLACK
 from figura import Figura
+import pravila
 
 
 class Tabla:
     def __init__(self):
         self.tabla = [None] * 32
         self.izabrana_figura = None
+        self.br=0
         self.napravi_tablu()
 
     def red_kolona_u_indeks(self, red, kolona):
@@ -29,18 +30,6 @@ class Tabla:
 
         return red, kolona
 
-    def nacrtaj_polja(self, prozor):
-        prozor.fill(BEIGE)
-
-        for red in range(ROWS):
-            for kolona in range(COLS):
-                if (red + kolona) % 2 == 1:
-                    pygame.draw.rect(
-                        prozor,
-                        BROWN,
-                        (kolona * SQUARE_SIZE, red * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
-                    )
-
     def napravi_tablu(self):
         for red in range(ROWS):
             for kolona in range(COLS):
@@ -51,44 +40,6 @@ class Tabla:
                         self.tabla[indeks] = Figura(red, kolona, BLACK)
                     elif red > 4:
                         self.tabla[indeks] = Figura(red, kolona, WHITE)
-
-    def nacrtaj(self, prozor):
-        self.nacrtaj_polja(prozor)
-        self.nacrtaj_validne_poteze(prozor)
-
-        for figura in self.tabla:
-            if figura is not None:
-                figura.nacrtaj(prozor)
-
-        self.nacrtaj_izabranu_figuru(prozor)
-
-    def nacrtaj_validne_poteze(self, prozor):
-        if self.izabrana_figura is None:
-            return
-
-        vreme = pygame.time.get_ticks()
-        puls = int(3 + 2 * abs((vreme % 900) / 450 - 1))
-        validni, *_=self.validni_potezi(self.izabrana_figura)
-        for indeks in validni:
-            red, kolona = self.indeks_u_red_kolonu(indeks)
-            x = kolona * SQUARE_SIZE + SQUARE_SIZE // 2
-            y = red * SQUARE_SIZE + SQUARE_SIZE // 2
-
-            pygame.draw.circle(prozor, LIGHT_GOLD, (x, y), 18 + puls, 3)
-            pygame.draw.circle(prozor, GOLD, (x, y), 7)
-
-    def nacrtaj_izabranu_figuru(self, prozor):
-        if self.izabrana_figura is None:
-            return
-
-        x = self.izabrana_figura.col * SQUARE_SIZE + SQUARE_SIZE // 2
-        y = self.izabrana_figura.row * SQUARE_SIZE + SQUARE_SIZE // 2
-        vreme = pygame.time.get_ticks()
-        puls = int(4 * abs((vreme % 1000) / 500 - 1))
-        radius = SQUARE_SIZE // 2 - 5 + puls
-
-        pygame.draw.circle(prozor, LIGHT_GOLD, (x, y), radius, 3)
-        pygame.draw.circle(prozor, GOLD, (x, y), radius - 6, 2)
 
     def uzmi_figuru(self, red, kolona):
         indeks = self.red_kolona_u_indeks(red, kolona)
@@ -103,35 +54,22 @@ class Tabla:
         indeks = self.red_kolona_u_indeks(red, kolona)
         figura = self.uzmi_figuru(red, kolona)
 
-        if figura == self.izabrana_figura:
+        if self.izabrana_figura is not None and  figura == self.izabrana_figura:
             self.izabrana_figura = None
-            return True
+            return False
 
-        if figura is not None:
+        if figura is not None and figura.color == WHITE:
             self.izabrana_figura = figura
             return True
 
         if self.izabrana_figura is not None and indeks is not None:
-            validni,pojedeni1,pojedeni2 = self.validni_potezi(self.izabrana_figura)
+            validni,pojedeni = pravila.validni_potezi(self, self.izabrana_figura)
             if indeks not in validni:
                 return False
-            if pojedeni1 is None:
-                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
-
-            elif pojedeni2 is None:
-                for p in pojedeni1:
-                    self.tabla[p] = None
-                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
-
-            elif indeks == validni[0]:
-                for p in pojedeni1:
-                    self.tabla[p] = None
+            if not pojedeni:
                 pomereno = self.pomeri(self.izabrana_figura, red, kolona)
             else:
-                for p in pojedeni2:
-                    self.tabla[p] = None
-                pomereno = self.pomeri(self.izabrana_figura, red, kolona)
-
+                pomereno = self.pomeri(self.izabrana_figura, red, kolona,pojedeni)
 
             if pomereno:
                 self.izabrana_figura = None
@@ -140,75 +78,19 @@ class Tabla:
 
         return False
 
-    def validni_potezi(self,figura):
-        validni=[]
-        moranje = False
-        pojedeni=[]
-        pojedeni2=[]
-        if figura is None:
-            return False
-        
-        red =figura.row
-        kolona=figura.col
-
-        if figura.color == WHITE:
-            smerovi = [(-1,-1),(-1,1)]
-        if figura.color == BLACK:
-            smerovi = [(1,-1),(1,1)]
-        if figura.kraljevic:
-            smerovi = [(-1,-1),(-1,1),(1,-1),(1,1)]
-        
-        for red_smer,kolona_smer in smerovi:
-            novi_red= red_smer+red
-            nova_kolona= kolona_smer+kolona
-            novi_indeks = self.red_kolona_u_indeks(novi_red,nova_kolona)
-            if novi_indeks is None:
-                continue
-            if novi_indeks is not None and self.tabla[novi_indeks] is None and not moranje:
-                validni.append(novi_indeks)
-            elif self.tabla[novi_indeks] is not None:
-                if not moranje:
-                    skok = self.jedi(novi_indeks,red_smer,kolona_smer,pojedeni)
-                else:
-                    skok = self.jedi(novi_indeks,red_smer,kolona_smer,pojedeni2)
-                if skok is None:
-                    pojedeni2=pojedeni=None
-
-                if skok is not None:
-                    if not moranje:
-                        validni=[]
-                    moranje=True
-                    validni.append(skok)
-
-        if moranje is True and len(validni) >1:
-            return validni,pojedeni,pojedeni2
-        else:
-            return validni,pojedeni,None
-
-    def pomeri(self,figura,red,kolona):
+    def pomeri(self, figura, red, kolona, pojedeni=None):
+        if pojedeni is None:
+            pojedeni = []
+        self.br+=1
         indeks = self.red_kolona_u_indeks(figura.row,figura.col)
         self.tabla[indeks] = None
         novi_indeks =self.red_kolona_u_indeks(red,kolona)
         self.tabla[novi_indeks]=figura
         figura.row=red
         figura.col=kolona
-        if red==0:
+        for p in pojedeni:
+            self.br=0
+            self.tabla[p] = None
+        if red==0 or red==ROWS-1:
             figura.postani_kraljevic()
         return True
-
-    def jedi(self,indeks,smer_r,smer_k,pojedeni):
-        if self.tabla[indeks] is None:
-            return indeks
-        else:
-            if self.tabla[indeks] is not None and self.tabla[indeks].color ==WHITE:
-                return None
-            pojedeni.append(indeks)
-            red,kolona = self.indeks_u_red_kolonu(indeks)
-            red += smer_r
-            kolona+=smer_k
-            indeks = self.red_kolona_u_indeks(red,kolona)
-            if indeks is None:
-                return None
-            
-            
-            return self.jedi(indeks,smer_r,smer_k,pojedeni)

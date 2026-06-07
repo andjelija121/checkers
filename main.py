@@ -1,6 +1,7 @@
 import pygame
 from konstante import WIDTH, HEIGHT, SQUARE_SIZE
-from tabla import Tabla
+from igra import Igra
+import renderer
 
 
 pygame.init()
@@ -19,7 +20,7 @@ def uzmi_red_kolonu_od_misa(pos):
 def main():
     radi = True
     sat = pygame.time.Clock()
-    tabla = Tabla()
+    igra = Igra()
 
     while radi:
         sat.tick(60)
@@ -30,10 +31,16 @@ def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                red, kolona = uzmi_red_kolonu_od_misa(pos)
-                tabla.izaberi(red, kolona)
+                if (igra.pobednik is not None or igra.nereseno) and renderer.klik_na_igraj_opet(pos):
+                    igra.resetuj()
+                    continue
 
-        tabla.nacrtaj(PROZOR)
+                red, kolona = uzmi_red_kolonu_od_misa(pos)
+                igra.jedan_potez(red,kolona)
+
+        igra.update()
+        renderer.nacrtaj(igra.tabla, PROZOR)
+        renderer.nacrtaj_kraj_igre(PROZOR, igra.pobednik, igra.nereseno)
         pygame.display.update()
 
     pygame.quit()
