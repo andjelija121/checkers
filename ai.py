@@ -14,8 +14,8 @@ class Ai:
         najbolji_potez = None
 
         for potez in svi_potezi(tabla,BLACK):
-            nova_tabla = self.odigraj_na_kopiji_table(tabla,potez)
-            ocena = self.minimax(nova_tabla,3,False)
+            nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
+            ocena = self.minimax(nova_tabla,6,-inf,+inf,False)
             
             if ocena>najbolja_ocena:
                 najbolja_ocena = ocena
@@ -23,24 +23,45 @@ class Ai:
         
         red,kolona = tabla.indeks_u_red_kolonu(najbolji_potez.krajnji_indeks)
         pomeranje = tabla.pomeri(najbolji_potez.figura,red,kolona,najbolji_potez.pojedeni)
-        if pomeranje:
-            print("idegas")
 
-    def evaluacija(self,tabla):
+
+    def evaluacija(self, tabla):
         score = 0
 
-        for figura in tabla.tabla:
+        for i, figura in enumerate(tabla.tabla):
             if figura is None:
                 continue
 
-            vrednost = 3
-            if figura.kraljevic:
-                vrednost = 5
+            red, kolona = tabla.indeks_u_red_kolonu(i)
+            vrednost = 3 if not figura.kraljevic else 5
+
+            if not figura.kraljevic:
+                if figura.color == BLACK:
+                    vrednost += red * 0.1
+                else:
+                    vrednost += (7 - red) * 0.1
+
+
+            if kolona == 0 or kolona == 7:
+                vrednost += 0.5
+
+
+            if 2 <= kolona <= 5:
+                vrednost += 0.3
 
             if figura.color == BLACK:
                 score += vrednost
             else:
                 score -= vrednost
+
+        black_potezi = len(svi_potezi(tabla, BLACK))
+        white_potezi = len(svi_potezi(tabla, WHITE))
+        score += (black_potezi - white_potezi) * 0.05
+
+
+        black_jedenja = sum(1 for p in svi_potezi(tabla, BLACK) if p.pojedeni)
+        white_jedenja = sum(1 for p in svi_potezi(tabla, WHITE) if p.pojedeni)
+        score += (black_jedenja - white_jedenja) * 0.3
 
         return score
 
@@ -48,8 +69,16 @@ class Ai:
         nova_tabla = self.kopija_table(tabla)
         novi_red,nova_kolona = tabla.indeks_u_red_kolonu(potez.krajnji_indeks)
         nova_figura = nova_tabla.tabla[potez.pocetni_indeks]
+
         pomeri = nova_tabla.pomeri(nova_figura,novi_red,nova_kolona,potez.pojedeni)
-        return nova_tabla
+        nova_figura = nova_tabla.tabla[potez.krajnji_indeks]
+
+        lanac=False
+
+        for sledeci in svi_potezi(nova_tabla,nova_figura.color):
+            if sledeci.figura==nova_figura and sledeci.pojedeni:
+                lanac=True
+        return nova_tabla,lanac
     
     def kopija_table(self,tabla):
         nova = Tabla()
@@ -61,7 +90,7 @@ class Ai:
         return nova
 
 
-    def minimax(self,tabla,dubina,maxFigura):
+    def minimax(self,tabla,dubina,alfa,beta,maxFigura):
         if dubina ==0:
             return self.evaluacija(tabla)
         else:
@@ -72,9 +101,12 @@ class Ai:
                 maximum = -inf
                 
                 for potez in potezi:
-                    nova_tabla = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina-1,False)
+                    nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
+                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,False)
                     maximum = max(ocena,maximum)
+                    alfa = max(alfa, ocena)
+                    if alfa >= beta:
+                        break
                 return maximum
             else:
                 potezi = svi_potezi(tabla,WHITE)
@@ -83,7 +115,10 @@ class Ai:
                 minimum = inf
 
                 for potez in potezi:
-                    nova_tabla = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina-1,True)
+                    nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
+                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,True)
+                    beta =min(beta,ocena)
                     minimum = min(ocena,minimum)
+                    if beta<=alfa:
+                        break
                 return minimum

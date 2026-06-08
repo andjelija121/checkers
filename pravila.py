@@ -60,14 +60,28 @@ def jedi(tabla, indeks, smer_r, smer_k, pojedeni,boja,jedeni):
 
         return jedi(tabla, indeks, smer_r, smer_k, pojedeni,boja,jedeni)
 
-def svi_potezi(tabla,boja):
-    svi_potezi=[]
+
+def svi_potezi(tabla, boja):
+    svi = []
+
     for polje in tabla.tabla:
         if polje is None:
             continue
+
         if polje.color == boja:
-            validni,pojedeni = validni_potezi(tabla,polje)
+            validni, pojedeni = validni_potezi(tabla, polje)
+
             for v in validni:
-                indeks = tabla.red_kolona_u_indeks(polje.row,polje.col)
-                svi_potezi.append(Potez(polje,indeks,v,pojedeni.get(v,[])))
-    return svi_potezi
+                indeks = tabla.red_kolona_u_indeks(polje.row, polje.col)
+                svi.append(Potez(polje, indeks, v, pojedeni.get(v, [])))
+
+    jedenja = []
+
+    for potez in svi:
+        if potez.pojedeni:
+            jedenja.append(potez)
+
+    if jedenja:
+        return jedenja
+
+    return svi

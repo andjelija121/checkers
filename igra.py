@@ -60,15 +60,6 @@ class Igra:
 
         potezi = svi_potezi(self.tabla, BLACK)
 
-        for potez in potezi:
-            if potez.pojedeni:
-                red,kolona=self.tabla.indeks_u_red_kolonu(potez.krajnji_indeks)
-                pomeranje=self.tabla.pomeri(potez.figura,red,kolona,potez.pojedeni)
-                if pomeranje:
-                    self.zavrsi_ai_potez()
-                return
-
-
         if not potezi:
             self.pobednik = WHITE
             self.na_potezu = None
