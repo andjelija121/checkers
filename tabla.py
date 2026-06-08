@@ -1,12 +1,14 @@
 from konstante import ROWS, COLS, WHITE, BLACK
 from figura import Figura
 import pravila
+import pygame
 
 
 class Tabla:
     def __init__(self):
         self.tabla = [None] * 32
         self.izabrana_figura = None
+        self.animacija_jedenja = []
         self.br=0
         self.napravi_tablu()
 
@@ -80,6 +82,8 @@ class Tabla:
     def pomeri(self, figura, red, kolona, pojedeni=None):
         if pojedeni is None:
             pojedeni = []
+        sada = pygame.time.get_ticks()
+        self.animacija_jedenja = [(p, sada + i * 180) for i, p in enumerate(pojedeni)]
         self.br+=1
         indeks = self.red_kolona_u_indeks(figura.row,figura.col)
         self.tabla[indeks] = None

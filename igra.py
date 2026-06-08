@@ -46,7 +46,7 @@ class Igra:
                 return
 
             self.na_potezu = BLACK
-            self.ai_ceka_do = pygame.time.get_ticks() + 500
+            self.ai_ceka_do = pygame.time.get_ticks() +500
 
     def update(self):
         if self.pobednik is not None or self.nereseno:
