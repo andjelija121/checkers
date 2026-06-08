@@ -9,6 +9,7 @@ class Tabla:
         self.tabla = [None] * 32
         self.izabrana_figura = None
         self.animacija_jedenja = []
+        self.animacije_ukljucene = True
         self.br=0
         self.napravi_tablu()
 
@@ -82,8 +83,22 @@ class Tabla:
     def pomeri(self, figura, red, kolona, pojedeni=None):
         if pojedeni is None:
             pojedeni = []
-        sada = pygame.time.get_ticks()
-        self.animacija_jedenja = [(p, sada + i * 180) for i, p in enumerate(pojedeni)]
+        if self.animacije_ukljucene:
+            sada = pygame.time.get_ticks()
+            self.animacija_jedenja = []
+
+            for i, p in enumerate(pojedeni):
+                pojedena_figura = self.tabla[p]
+
+                if pojedena_figura is not None:
+                    self.animacija_jedenja.append((
+                        p,
+                        pojedena_figura.color,
+                        pojedena_figura.kraljevic,
+                        sada + i * 260
+                    ))
+        else:
+            self.animacija_jedenja = []
         self.br+=1
         indeks = self.red_kolona_u_indeks(figura.row,figura.col)
         self.tabla[indeks] = None

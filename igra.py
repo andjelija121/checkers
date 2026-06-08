@@ -41,12 +41,15 @@ class Igra:
             return False
 
         if odigrano and self.tabla.izabrana_figura is None:
+            if self.proveri_pobednika(BLACK):
+                return
+
             self.proveri_nereseno()
             if self.nereseno:
                 return
 
             self.na_potezu = BLACK
-            self.ai_ceka_do = pygame.time.get_ticks() +500
+            self.ai_ceka_do = pygame.time.get_ticks() +300
 
     def update(self):
         if self.pobednik is not None or self.nereseno:
@@ -58,18 +61,13 @@ class Igra:
         if pygame.time.get_ticks() < self.ai_ceka_do:
             return
 
-        potezi = svi_potezi(self.tabla, BLACK)
-
-        if not potezi:
-            self.pobednik = WHITE
-            self.na_potezu = None
-            self.ai_ceka_do = None
-            return
-
         self.ai.ai_potez(self.tabla)
         self.zavrsi_ai_potez()
 
     def zavrsi_ai_potez(self):
+        if self.proveri_pobednika(WHITE):
+            return
+
         self.proveri_nereseno()
         if self.nereseno:
             self.na_potezu = None
@@ -83,6 +81,15 @@ class Igra:
             if potez.pojedeni:
                 self.tabla.izabrana_figura = potez.figura
                 self.obavezna_figura = potez.figura
+
+    def proveri_pobednika(self, boja_na_potezu):
+        if svi_potezi(self.tabla, boja_na_potezu):
+            return False
+
+        self.pobednik = BLACK if boja_na_potezu == WHITE else WHITE
+        self.na_potezu = None
+        self.ai_ceka_do = None
+        return True
 
 
     def proveri_nereseno(self):

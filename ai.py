@@ -21,8 +21,11 @@ class Ai:
                 najbolja_ocena = ocena
                 najbolji_potez = potez
         
+        if najbolji_potez is None:
+            return
+
         red,kolona = tabla.indeks_u_red_kolonu(najbolji_potez.krajnji_indeks)
-        pomeranje = tabla.pomeri(najbolji_potez.figura,red,kolona,najbolji_potez.pojedeni)
+        tabla.pomeri(najbolji_potez.figura,red,kolona,najbolji_potez.pojedeni)
 
 
     def evaluacija(self, tabla):
@@ -54,23 +57,49 @@ class Ai:
             else:
                 score -= vrednost
 
-        black_potezi = len(svi_potezi(tabla, BLACK))
-        white_potezi = len(svi_potezi(tabla, WHITE))
+        black_potezi_lista = svi_potezi(tabla, BLACK)
+        white_potezi_lista = svi_potezi(tabla, WHITE)
+        black_potezi = len(black_potezi_lista)
+        white_potezi = len(white_potezi_lista)
         score += (black_potezi - white_potezi) * 0.05
 
 
-        black_jedenja = sum(1 for p in svi_potezi(tabla, BLACK) if p.pojedeni)
-        white_jedenja = sum(1 for p in svi_potezi(tabla, WHITE) if p.pojedeni)
-        score += (black_jedenja - white_jedenja) * 0.3
+        black_jedenja = sum(len(p.pojedeni) for p in black_potezi_lista if p.pojedeni)
+        white_jedenja = sum(len(p.pojedeni) for p in white_potezi_lista if p.pojedeni)
+        score += (black_jedenja - white_jedenja) * 1.4
+
+        najveca_black_prilika = self.najveca_vrednost_jedenja(tabla, black_potezi_lista)
+        najveca_white_prilika = self.najveca_vrednost_jedenja(tabla, white_potezi_lista)
+        score += najveca_black_prilika * 0.8
+        score -= najveca_white_prilika * 2.2
 
         return score
+
+    def vrednost_figure(self, figura):
+        if figura is None:
+            return 0
+
+        return 5 if figura.kraljevic else 3
+
+    def najveca_vrednost_jedenja(self, tabla, potezi):
+        najbolja = 0
+
+        for potez in potezi:
+            vrednost = 0
+
+            for indeks in potez.pojedeni:
+                vrednost += self.vrednost_figure(tabla.tabla[indeks])
+
+            najbolja = max(najbolja, vrednost)
+
+        return najbolja
 
     def odigraj_na_kopiji_table(self,tabla,potez):
         nova_tabla = self.kopija_table(tabla)
         novi_red,nova_kolona = tabla.indeks_u_red_kolonu(potez.krajnji_indeks)
         nova_figura = nova_tabla.tabla[potez.pocetni_indeks]
 
-        pomeri = nova_tabla.pomeri(nova_figura,novi_red,nova_kolona,potez.pojedeni)
+        nova_tabla.pomeri(nova_figura,novi_red,nova_kolona,potez.pojedeni)
         nova_figura = nova_tabla.tabla[potez.krajnji_indeks]
 
         lanac=False
@@ -81,7 +110,12 @@ class Ai:
         return nova_tabla,lanac
     
     def kopija_table(self,tabla):
-        nova = Tabla()
+        nova = Tabla.__new__(Tabla)
+        nova.tabla = [None] * 32
+        nova.izabrana_figura = None
+        nova.animacija_jedenja = []
+        nova.animacije_ukljucene = False
+        nova.br = tabla.br
         for i,f in enumerate(tabla.tabla):
             if f is not None:
                 nova_figura = Figura(f.row,f.col,f.color)

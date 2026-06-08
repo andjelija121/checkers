@@ -22,12 +22,12 @@ def nacrtaj_polja(tabla, prozor):
 def nacrtaj(tabla, prozor):
     nacrtaj_polja(tabla, prozor)
     nacrtaj_validne_poteze(tabla, prozor)
-    nacrtaj_animaciju_jedenja(tabla, prozor)
 
     for figura in tabla.tabla:
         if figura is not None:
             figura.nacrtaj(prozor)
 
+    nacrtaj_animaciju_jedenja(tabla, prozor)
     nacrtaj_izabranu_figuru(tabla, prozor)
 
 
@@ -52,27 +52,32 @@ def nacrtaj_animaciju_jedenja(tabla, prozor):
     vreme = pygame.time.get_ticks()
     aktivne = []
 
-    for indeks, pocetak in tabla.animacija_jedenja:
+    for indeks, boja, kraljevic, pocetak in tabla.animacija_jedenja:
         proslo = vreme - pocetak
 
         if proslo < 0:
-            aktivne.append((indeks, pocetak))
+            aktivne.append((indeks, boja, kraljevic, pocetak))
             continue
 
-        if proslo > 420:
+        if proslo > 520:
             continue
 
-        aktivne.append((indeks, pocetak))
+        aktivne.append((indeks, boja, kraljevic, pocetak))
         red, kolona = tabla.indeks_u_red_kolonu(indeks)
         x = kolona * SQUARE_SIZE + SQUARE_SIZE // 2
         y = red * SQUARE_SIZE + SQUARE_SIZE // 2
-        radius = 12 + proslo // 12
-        alpha = max(0, 210 - proslo // 2)
+        radius = SQUARE_SIZE // 2 - 10 + proslo // 30
+        alpha = max(0, 230 - proslo // 2)
 
         efekat = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
         centar = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
-        pygame.draw.circle(efekat, (*LIGHT_GOLD, alpha), centar, radius, 4)
-        pygame.draw.circle(efekat, (*GOLD, alpha), centar, max(4, radius // 3))
+        pygame.draw.circle(efekat, (0, 0, 0, alpha // 3), (centar[0], centar[1] + 5), radius)
+        pygame.draw.circle(efekat, (*boja, alpha), centar, radius)
+        pygame.draw.circle(efekat, (*GOLD, alpha), centar, radius, 4)
+
+        if kraljevic:
+            pygame.draw.circle(efekat, (*LIGHT_GOLD, alpha), centar, radius // 2, 3)
+
         prozor.blit(efekat, (x - SQUARE_SIZE // 2, y - SQUARE_SIZE // 2))
 
     tabla.animacija_jedenja = aktivne
