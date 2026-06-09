@@ -1,3 +1,5 @@
+import random
+import pygame
 from math import inf
 
 from figura import Figura
@@ -7,19 +9,38 @@ from tabla import Tabla
 
 class Ai:
     def __init__(self):
-        pass
+        self.transposition_table = {}
+        self.zobrist = self.napravi_zobrist_tabelu()
 
     def ai_potez(self,tabla):
-        najbolja_ocena=-inf
-        najbolji_potez = None
+        self.transposition_table = {}
 
-        for potez in svi_potezi(tabla,BLACK):
-            nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
-            ocena = self.minimax(nova_tabla,6,-inf,+inf,False)
-            
-            if ocena>najbolja_ocena:
-                najbolja_ocena = ocena
-                najbolji_potez = potez
+        pocetak = pygame.time.get_ticks()
+        limit = 3000
+        potezi = svi_potezi(tabla,BLACK)
+        najbolji_potez = potezi[0] if potezi else None
+
+        dubina = 1
+
+        while pygame.time.get_ticks() - pocetak < limit:
+            najbolja_ocena_za_dubinu = -inf
+            najbolji_potez_za_dubinu = None
+
+            try:
+                for potez in potezi:
+                    nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
+                    ocena = self.minimax(nova_tabla,dubina,-inf,+inf,False,pocetak,limit)
+                    
+                    if ocena>najbolja_ocena_za_dubinu:
+                        najbolja_ocena_za_dubinu = ocena
+                        najbolji_potez_za_dubinu = potez
+            except TimeoutError:
+                break
+
+            if najbolji_potez_za_dubinu is not None:
+                najbolji_potez = najbolji_potez_za_dubinu
+
+            dubina += 1
         
         if najbolji_potez is None:
             return
@@ -27,7 +48,37 @@ class Ai:
         red,kolona = tabla.indeks_u_red_kolonu(najbolji_potez.krajnji_indeks)
         tabla.pomeri(najbolji_potez.figura,red,kolona,najbolji_potez.pojedeni)
 
-    def evaluacija2(self, tabla):
+    def napravi_zobrist_tabelu(self):
+        random.seed(1)
+        tabela = []
+
+        for indeks in range(32):
+            tabela.append({
+                "BLACK": random.getrandbits(64),
+                "BLACK_KRALJEVIC": random.getrandbits(64),
+                "WHITE": random.getrandbits(64),
+                "WHITE_KRALJEVIC": random.getrandbits(64),
+            })
+
+        return tabela
+
+    def zobrist_hash(self, tabla):
+        h = 0
+
+        for indeks, figura in enumerate(tabla.tabla):
+            if figura is None:
+                continue
+
+            if figura.color == BLACK:
+                tip = "BLACK_KRALJEVIC" if figura.kraljevic else "BLACK"
+            else:
+                tip = "WHITE_KRALJEVIC" if figura.kraljevic else "WHITE"
+
+            h ^= self.zobrist[indeks][tip]
+
+        return h
+
+    def evaluacijatest(self, tabla):
         return 0
 
     def evaluacija(self, tabla):
@@ -126,35 +177,57 @@ class Ai:
         return nova
 
 
-    def minimax(self,tabla,dubina,alfa,beta,maxFigura):
+    def minimax(self,tabla,dubina,alfa,beta,maxFigura,pocetak,limit):
+        if pygame.time.get_ticks() - pocetak >= limit:
+            raise TimeoutError
+
+        kljuc = (self.zobrist_hash(tabla),dubina,maxFigura)
+
+        if kljuc in self.transposition_table:
+            return self.transposition_table[kljuc]
+
         if dubina ==0:
-            return self.evaluacija2(tabla)
+            rezultat = self.evaluacija(tabla)
+            self.transposition_table[kljuc] = rezultat
+            return rezultat
         else:
             if maxFigura:
                 potezi = svi_potezi(tabla,BLACK)
                 if not potezi:
-                    return self.evaluacija2(tabla)
+                    rezultat = self.evaluacija(tabla)
+                    self.transposition_table[kljuc] = rezultat
+                    return rezultat
                 maximum = -inf
+                preseceno = False
                 
                 for potez in potezi:
                     nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,False)
+                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,False,pocetak,limit)
                     maximum = max(ocena,maximum)
                     alfa = max(alfa, ocena)
                     if alfa >= beta:
+                        preseceno = True
                         break
+                if not preseceno:
+                    self.transposition_table[kljuc] = maximum
                 return maximum
             else:
                 potezi = svi_potezi(tabla,WHITE)
                 if not potezi:
-                    return self.evaluacija2(tabla)
+                    rezultat = self.evaluacija(tabla)
+                    self.transposition_table[kljuc] = rezultat
+                    return rezultat
                 minimum = inf
+                preseceno = False
 
                 for potez in potezi:
                     nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,True)
+                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,True,pocetak,limit)
                     beta =min(beta,ocena)
                     minimum = min(ocena,minimum)
                     if beta<=alfa:
+                        preseceno = True
                         break
+                if not preseceno:
+                    self.transposition_table[kljuc] = minimum
                 return minimum
