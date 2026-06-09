@@ -1,5 +1,6 @@
 from konstante import WHITE, BLACK
 from potez import Potez
+from pravila_kraljevic import validni_potezi_kraljevic
 
 
 def validni_potezi(tabla, figura):
@@ -13,15 +14,16 @@ def validni_potezi(tabla, figura):
     pocetni_indeks = tabla.red_kolona_u_indeks(figura.row, figura.col)
     if pocetni_indeks is None:
         return []
-    
+
+    if figura.kraljevic:
+        return validni_potezi_kraljevic(tabla,figura)
 
     if figura.color == WHITE:
         smerovi = [(-1, -1), (-1, 1)]
     elif figura.color == BLACK:
         smerovi = [(1, -1), (1, 1)]
 
-    if figura.kraljevic:
-        smerovi = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+
 
     for red_smer, kolona_smer in smerovi:
         novi_red = figura.row + red_smer

@@ -49,7 +49,7 @@ class Igra:
                 return
 
             self.na_potezu = BLACK
-            self.ai_ceka_do = pygame.time.get_ticks() +300
+            self.ai_ceka_do = self.vreme_za_ai_potez()
 
     def update(self):
         if self.pobednik is not None or self.nereseno:
@@ -90,6 +90,16 @@ class Igra:
         self.na_potezu = None
         self.ai_ceka_do = None
         return True
+
+    def vreme_za_ai_potez(self):
+        sada = pygame.time.get_ticks()
+        vreme = sada + 600
+
+        if self.tabla.animacija_jedenja:
+            poslednji_pocetak = max(animacija[3] for animacija in self.tabla.animacija_jedenja)
+            vreme = max(vreme, poslednji_pocetak + 520 + 150)
+
+        return vreme
 
 
     def proveri_nereseno(self):

@@ -27,6 +27,8 @@ class Ai:
         red,kolona = tabla.indeks_u_red_kolonu(najbolji_potez.krajnji_indeks)
         tabla.pomeri(najbolji_potez.figura,red,kolona,najbolji_potez.pojedeni)
 
+    def evaluacija2(self, tabla):
+        return 0
 
     def evaluacija(self, tabla):
         score = 0
@@ -126,12 +128,12 @@ class Ai:
 
     def minimax(self,tabla,dubina,alfa,beta,maxFigura):
         if dubina ==0:
-            return self.evaluacija(tabla)
+            return self.evaluacija2(tabla)
         else:
             if maxFigura:
                 potezi = svi_potezi(tabla,BLACK)
                 if not potezi:
-                    return self.evaluacija(tabla)
+                    return self.evaluacija2(tabla)
                 maximum = -inf
                 
                 for potez in potezi:
@@ -145,7 +147,7 @@ class Ai:
             else:
                 potezi = svi_potezi(tabla,WHITE)
                 if not potezi:
-                    return self.evaluacija(tabla)
+                    return self.evaluacija2(tabla)
                 minimum = inf
 
                 for potez in potezi:
