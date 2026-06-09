@@ -28,6 +28,7 @@ def nacrtaj(tabla, prozor):
             figura.nacrtaj(prozor)
 
     nacrtaj_animaciju_jedenja(tabla, prozor)
+    nacrtaj_animaciju_undo(tabla, prozor)
     nacrtaj_izabranu_figuru(tabla, prozor)
 
 
@@ -81,6 +82,60 @@ def nacrtaj_animaciju_jedenja(tabla, prozor):
         prozor.blit(efekat, (x - SQUARE_SIZE // 2, y - SQUARE_SIZE // 2))
 
     tabla.animacija_jedenja = aktivne
+
+
+def nacrtaj_animaciju_undo(tabla, prozor):
+    if not hasattr(tabla, "animacija_undo"):
+        return
+
+    vreme = pygame.time.get_ticks()
+    aktivne = []
+
+    for tip, od_indeksa, do_indeksa, boja, kraljevic, pocetak in tabla.animacija_undo:
+        proslo = vreme - pocetak
+
+        if proslo < 0:
+            aktivne.append((tip, od_indeksa, do_indeksa, boja, kraljevic, pocetak))
+            continue
+
+        if proslo > 420:
+            continue
+
+        aktivne.append((tip, od_indeksa, do_indeksa, boja, kraljevic, pocetak))
+
+        if tip == "potez":
+            napredak = min(1, proslo / 420)
+            red_od, kolona_od = tabla.indeks_u_red_kolonu(od_indeksa)
+            red_do, kolona_do = tabla.indeks_u_red_kolonu(do_indeksa)
+
+            x_od = kolona_od * SQUARE_SIZE + SQUARE_SIZE // 2
+            y_od = red_od * SQUARE_SIZE + SQUARE_SIZE // 2
+            x_do = kolona_do * SQUARE_SIZE + SQUARE_SIZE // 2
+            y_do = red_do * SQUARE_SIZE + SQUARE_SIZE // 2
+
+            x = x_od + (x_do - x_od) * napredak
+            y = y_od + (y_do - y_od) * napredak
+            radius = SQUARE_SIZE // 2 - 12
+            alpha = max(0, 180 - int(proslo / 3))
+        else:
+            red, kolona = tabla.indeks_u_red_kolonu(do_indeksa)
+            x = kolona * SQUARE_SIZE + SQUARE_SIZE // 2
+            y = red * SQUARE_SIZE + SQUARE_SIZE // 2
+            radius = SQUARE_SIZE // 2 - 18 + proslo // 24
+            alpha = min(210, 70 + proslo // 2)
+
+        efekat = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        centar = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
+        pygame.draw.circle(efekat, (0, 0, 0, alpha // 4), (centar[0], centar[1] + 5), radius)
+        pygame.draw.circle(efekat, (*boja, alpha), centar, radius)
+        pygame.draw.circle(efekat, (*LIGHT_GOLD, alpha), centar, radius, 4)
+
+        if kraljevic:
+            pygame.draw.circle(efekat, (*GOLD, alpha), centar, radius // 2, 3)
+
+        prozor.blit(efekat, (x - SQUARE_SIZE // 2, y - SQUARE_SIZE // 2))
+
+    tabla.animacija_undo = aktivne
 
 
 def nacrtaj_izabranu_figuru(tabla, prozor):

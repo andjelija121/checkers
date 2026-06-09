@@ -45,8 +45,7 @@ class Ai:
         if najbolji_potez is None:
             return
 
-        red,kolona = tabla.indeks_u_red_kolonu(najbolji_potez.krajnji_indeks)
-        tabla.pomeri(najbolji_potez.figura,red,kolona,najbolji_potez.pojedeni)
+        tabla.odigraj_potez(najbolji_potez)
 
     def napravi_zobrist_tabelu(self):
         random.seed(1)

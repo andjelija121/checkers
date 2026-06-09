@@ -38,6 +38,10 @@ def main():
                 red, kolona = uzmi_red_kolonu_od_misa(pos)
                 igra.jedan_potez(red,kolona)
 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_u:
+                    igra.undo_potez()
+
         igra.update()
         renderer.nacrtaj(igra.tabla, PROZOR)
         renderer.nacrtaj_kraj_igre(PROZOR, igra.pobednik, igra.nereseno)

@@ -1,5 +1,5 @@
 from konstante import WHITE, BLACK
-from potez import Potez
+from strukture.potez import Potez
 from pravila_kraljevic import validni_potezi_kraljevic
 
 

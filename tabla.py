@@ -2,13 +2,18 @@ from konstante import ROWS, COLS, WHITE, BLACK
 from figura import Figura
 import pravila
 import pygame
+from strukture.stek import Stek
+from strukture.UndoPotez import UndoZapis
+from strukture.potez import Potez
 
 
 class Tabla:
     def __init__(self):
         self.tabla = [None] * 32
+        self.stek =  Stek()
         self.izabrana_figura = None
         self.animacija_jedenja = []
+        self.animacija_undo = []
         self.animacije_ukljucene = True
         self.br=0
         self.napravi_tablu()
@@ -70,8 +75,12 @@ class Tabla:
 
             if indeks not in validni:
                 return False
+    
             pojedeni = pojedeni_po_skoku.get(indeks, [])
-            pomereno = self.pomeri(self.izabrana_figura, red, kolona, pojedeni)
+
+            figura_indeks = self.red_kolona_u_indeks(self.izabrana_figura.row,self.izabrana_figura.col)
+            potez = Potez(self.izabrana_figura,figura_indeks,indeks,pojedeni)
+            pomereno = self.odigraj_potez(potez)
             
             if pomereno:
                 self.izabrana_figura = None
@@ -79,6 +88,61 @@ class Tabla:
             return pomereno
 
         return False
+
+    def odigraj_potez(self, potez):
+        pojedene_figure=[]
+        for p in potez.pojedeni:
+            pojedene_figure.append(self.tabla[p])
+
+        self.stek.push(UndoZapis(potez,pojedene_figure,potez.figura.kraljevic,self.br))
+
+        red, kolona = self.indeks_u_red_kolonu(potez.krajnji_indeks)
+        return self.pomeri(potez.figura, red, kolona, potez.pojedeni)
+
+    def undo_potez(self):
+        undo = self.stek.pop()
+        if undo is None:
+            return False
+
+        potez = undo.potez
+        figura = self.tabla[potez.krajnji_indeks]
+        if figura is None:
+            return False
+
+        red, kolona = self.indeks_u_red_kolonu(potez.pocetni_indeks)
+        figura.row = red
+        figura.col = kolona
+
+        self.tabla[potez.pocetni_indeks]=figura
+        self.tabla[potez.krajnji_indeks] = None
+
+        for pf in undo.pojedene_figure:
+            red=pf.row
+            kol = pf.col
+            novi_indeks = self.red_kolona_u_indeks(red,kol)
+            self.tabla[novi_indeks]=pf
+        
+        if not undo.figura_bila_kraljevic:
+            self.tabla[potez.pocetni_indeks].kraljevic = False
+
+        if self.animacije_ukljucene:
+            sada = pygame.time.get_ticks()
+            self.animacija_undo = [
+                ("potez", potez.krajnji_indeks, potez.pocetni_indeks, figura.color, figura.kraljevic, sada)
+            ]
+
+            for i, pf in enumerate(undo.pojedene_figure):
+                indeks = self.red_kolona_u_indeks(pf.row,pf.col)
+                self.animacija_undo.append(("figura", indeks, indeks, pf.color, pf.kraljevic, sada + 120 + i * 90))
+        else:
+            self.animacija_undo = []
+        
+        self.br = undo.br_pre
+        self.izabrana_figura = None
+        self.animacija_jedenja=[]
+
+        return True
+
 
     def pomeri(self, figura, red, kolona, pojedeni=None):
         if pojedeni is None:

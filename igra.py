@@ -107,3 +107,26 @@ class Igra:
             self.nereseno = True
             self.na_potezu = None
             self.ai_ceka_do = None
+
+    def undo_potez(self):
+        if self.na_potezu == BLACK and self.ai_ceka_do is not None:
+            broj_poteza_za_vracanje = 1
+        elif self.na_potezu == WHITE:
+            broj_poteza_za_vracanje = 2
+        else:
+            return False
+
+        vracen_bar_jedan = False
+        for _ in range(broj_poteza_za_vracanje):
+            if self.tabla.undo_potez():
+                vracen_bar_jedan = True
+
+        if not vracen_bar_jedan:
+            return False
+
+        self.na_potezu = WHITE
+        self.ai_ceka_do = None
+        self.obavezna_figura = None
+        self.pobednik = None
+        self.nereseno = False
+        return True
