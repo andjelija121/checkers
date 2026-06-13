@@ -1,5 +1,5 @@
 from konstante import ROWS, COLS, WHITE, BLACK
-from figura import Figura
+from strukture.figura import Figura
 import pravila
 import pygame
 from strukture.stek import Stek
@@ -66,6 +66,7 @@ class Tabla:
             self.izabrana_figura = None
             return False
 
+
         if figura is not None and figura.color == WHITE:
             self.izabrana_figura = figura
             return True
@@ -94,7 +95,10 @@ class Tabla:
         for p in potez.pojedeni:
             pojedene_figure.append(self.tabla[p])
 
-        self.stek.push(UndoZapis(potez,pojedene_figure,potez.figura.kraljevic,self.br))
+        self.stek.push(UndoZapis(potez,pojedene_figure,potez.figura.kraljevic,self.br,list(potez.figura.relikvije),
+        potez.figura.oklop,
+        potez.figura.kolebanje,
+        potez.figura.marko))
 
         red, kolona = self.indeks_u_red_kolonu(potez.krajnji_indeks)
         return self.pomeri(potez.figura, red, kolona, potez.pojedeni)
@@ -138,6 +142,10 @@ class Tabla:
             self.animacija_undo = []
         
         self.br = undo.br_pre
+        figura.oklop = undo.oklop_pre
+        figura.kolebanje = undo.kolebanje_pre
+        figura.relikvije = list(undo.relikvije_pre)
+        figura.marko = undo.marko_pre
         self.izabrana_figura = None
         self.animacija_jedenja=[]
 

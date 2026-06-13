@@ -7,7 +7,7 @@ import renderer
 pygame.init()
 
 PROZOR = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Junacki megdan")
+pygame.display.set_caption("Јуначки мегдан")
 
 
 def uzmi_red_kolonu_od_misa(pos):
@@ -35,6 +35,12 @@ def main():
                     igra.resetuj()
                     continue
 
+                if igra.ceka_izbor_relikvije is not None:
+                    izbor = renderer.klik_na_izbor_relikvije(pos)
+                    if izbor is not None:
+                        igra.izaberi_relikviju(izbor)
+                    continue
+
                 red, kolona = uzmi_red_kolonu_od_misa(pos)
                 igra.jedan_potez(red,kolona)
 
@@ -43,7 +49,7 @@ def main():
                     igra.undo_potez()
 
         igra.update()
-        renderer.nacrtaj(igra.tabla, PROZOR)
+        renderer.nacrtaj(igra, PROZOR)
         renderer.nacrtaj_kraj_igre(PROZOR, igra.pobednik, igra.nereseno)
         pygame.display.update()
 

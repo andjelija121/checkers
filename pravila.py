@@ -36,39 +36,70 @@ def validni_potezi(tabla, figura):
         if tabla.tabla[novi_indeks] is None and not moranje:
             validni.append(novi_indeks)
 
-        elif tabla.tabla[novi_indeks] is not None and tabla.tabla[novi_indeks].color != figura.color:
-            skok_indeks = jedi(tabla, red_smer, kolona_smer, novi_indeks)
+        if tabla.tabla[novi_indeks] is not None and tabla.tabla[novi_indeks].color == figura.color:
+            if figura.ima_relikviju("sarac") and figura.kolebanje == 0 and not moranje:
+                skok_red = novi_red + red_smer
+                skok_kolona = nova_kolona + kolona_smer
+                skok_indeks = tabla.red_kolona_u_indeks(skok_red, skok_kolona)
 
+                if skok_indeks is not None and tabla.tabla[skok_indeks] is None:
+                    validni.append(skok_indeks)
+            continue
+
+        elif tabla.tabla[novi_indeks] is not None and tabla.tabla[novi_indeks].color != figura.color and figura.kolebanje==0:
+            if figura.ima_relikviju("topuz"):
+                    if not moranje:
+                        validni=[]
+                        moranje=True
+                    validni.append(novi_indeks)
+                    pojedeni[novi_indeks]=[novi_indeks]
+                    continue
+            skok_indeks = jedi(tabla, red_smer, kolona_smer, novi_indeks)
             if skok_indeks is not None:
                 if not moranje:
                     validni = []
                     moranje = True
-            lancano(tabla,figura,smerovi,red_smer,kolona_smer,novi_indeks,pojedeni,validni,[])
+                lancano(
+                    tabla,
+                    figura,
+                    smerovi,
+                    skok_indeks,
+                    novi_indeks,
+                    pojedeni,
+                    validni,
+                    []
+                )
             
 
     return validni,pojedeni
                 
     
 def jedi(tabla,smer_r,smer_k,indeks):
+    if tabla.tabla[indeks].oklop>0:
+        return None
     red,kolona= tabla.indeks_u_red_kolonu(indeks)
     red+= smer_r
     kolona+=smer_k
+
     novi_indeks= tabla.red_kolona_u_indeks(red,kolona)
-    if novi_indeks is None or tabla.tabla[novi_indeks] is not None:
+
+    if novi_indeks is None:
+        return None
+    if tabla.tabla[novi_indeks] is not None:
         return None
     else:
         return novi_indeks
     
 
-def lancano(tabla, figura, smerovi, red_smer, kolona_smer, indeks, pojedeni, validni, jedeni):
-    pojeden = jedi(tabla, red_smer, kolona_smer, indeks)
+def lancano(tabla, figura, smerovi, sletanje, indeks_pojedene, pojedeni, validni, jedeni):
 
-    if pojeden is None:
+
+    if sletanje is None:
         return
 
-    novi_jedeni = jedeni + [indeks]
+    novi_jedeni = jedeni + [indeks_pojedene]
 
-    red_p, kolona_p = tabla.indeks_u_red_kolonu(pojeden)
+    red_p, kolona_p = tabla.indeks_u_red_kolonu(sletanje)
     nasao_nastavak = False
 
     for smer_r, smer_k in smerovi:
@@ -99,8 +130,7 @@ def lancano(tabla, figura, smerovi, red_smer, kolona_smer, indeks, pojedeni, val
             tabla,
             figura,
             smerovi,
-            smer_r,
-            smer_k,
+            sledeci_skok,
             novi_indeks,
             pojedeni,
             validni,
@@ -108,8 +138,8 @@ def lancano(tabla, figura, smerovi, red_smer, kolona_smer, indeks, pojedeni, val
         )
 
     if not nasao_nastavak:
-        validni.append(pojeden)
-        pojedeni[pojeden] = novi_jedeni
+        validni.append(sletanje)
+        pojedeni[sletanje] = novi_jedeni
 
 
 def svi_potezi(tabla, boja):

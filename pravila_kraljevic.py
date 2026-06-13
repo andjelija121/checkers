@@ -1,122 +1,212 @@
+SMEROVI = [
+    (-1, -1),
+    (-1, 1),
+    (1, -1),
+    (1, 1)
+]
+
+
 def validni_potezi_kraljevic(tabla, figura):
+    pocetni = tabla.red_kolona_u_indeks(
+        figura.row,
+        figura.col
+    )
+
+    jedenja = {}
+
+    if figura.kolebanje==0 or  figura.marko:
+        trazi_jedenja(
+            tabla,
+            figura,
+            pocetni,
+            pocetni,
+            [],
+            jedenja
+        )
+
+    if jedenja:
+        return list(jedenja.keys()), jedenja
+
     validni = []
-    pojedeni = {}
-    moranje = False
 
-    smerovi = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
-    pocetni_indeks = tabla.red_kolona_u_indeks(figura.row, figura.col)
+    for smer_red, smer_kolona in SMEROVI:
+        sarac = figura.ima_relikviju("sarac")
+        dodaj_prazna_polja(
+            tabla,
+            figura.row + smer_red,
+            figura.col + smer_kolona,
+            smer_red,
+            smer_kolona,
+            validni,
+            sarac,
+            figura.color
+        )
 
-    for smer_r, smer_k in smerovi:
-        smer_validni = []
-        jedeni = []
+    return validni, {}
 
-        red = figura.row + smer_r
-        kolona = figura.col + smer_k
-        indeks = tabla.red_kolona_u_indeks(red, kolona)
 
-        ide(tabla, indeks, smer_r, smer_k, figura.color, smer_validni, jedeni)
+def dodaj_prazna_polja(
+    tabla,
+    red,
+    kolona,
+    smer_red,
+    smer_kolona,
+    validni,
+    sarac,
+    boja
+):
+    indeks = tabla.red_kolona_u_indeks(red, kolona)
 
-        if jedeni:
-            if not moranje:
-                moranje = True
-                validni = []
-
-            for sletanje in smer_validni:
-                lancano_validni = []
-                lancano_pojedeni = {}
-
-                lancano_kraljevic(
-                    tabla,
-                    sletanje,
-                    figura.color,
-                    jedeni.copy(),
-                    lancano_validni,
-                    lancano_pojedeni
-                )
-
-                if lancano_validni:
-                    validni += lancano_validni
-                    pojedeni.update(lancano_pojedeni)
-                else:
-                    validni.append(sletanje)
-                    pojedeni[sletanje] = jedeni.copy()
-
-        elif not moranje:
-            validni += smer_validni
-
-    return validni, pojedeni
-def ide(tabla,indeks,smer_r,smer_k,boja,validni,pojedeni):
-    if indeks is None or (tabla.tabla[indeks] is not None and tabla.tabla[indeks].color == boja):
+    if indeks is None:
         return
-    if tabla.tabla[indeks] is None:
-        validni.append(indeks)
+
+    if tabla.tabla[indeks] is not None and tabla.tabla[indeks].color == boja and sarac:
+        skok = tabla.red_kolona_u_indeks(
+            red + smer_red,
+            kolona + smer_kolona
+        )
+
+        if skok is not None and tabla.tabla[skok] is None:
+            validni.append(skok)
+
+        return
+
     if tabla.tabla[indeks] is not None:
-        sledeci_indeks = racun_novi_indeks(tabla,indeks,smer_r,smer_k)
-        if  sledeci_indeks is None:
-            return
-        if tabla.tabla[sledeci_indeks]is not None:
-            return
-        
-        validni.clear()
-        pojedeni.append(indeks)
-        
-    novi_indeks = racun_novi_indeks(tabla,indeks,smer_r,smer_k)
-    ide(tabla,novi_indeks,smer_r,smer_k,boja,validni,pojedeni)
+        return
+
+    validni.append(indeks)
+
+    dodaj_prazna_polja(
+        tabla,
+        red + smer_red,
+        kolona + smer_kolona,
+        smer_red,
+        smer_kolona,
+        validni,
+        sarac,
+        boja
+    )
 
 
-def racun_novi_indeks(tabla,indeks,smer_r,smer_k):
-    red, kolona = tabla.indeks_u_red_kolonu(indeks)
-    red += smer_r
-    kolona += smer_k
-    return tabla.red_kolona_u_indeks(red, kolona)
-
-def lancano_kraljevic(tabla, trenutni_indeks, boja, do_sada_pojedeni, validni, pojedeni):
-    smerovi = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+def trazi_jedenja(
+    tabla,
+    figura,
+    trenutni,
+    pocetni,
+    pojedeni,
+    rezultat
+):
     nasao_nastavak = False
+    red, kolona = tabla.indeks_u_red_kolonu(trenutni)
 
-    red, kolona = tabla.indeks_u_red_kolonu(trenutni_indeks)
+    for smer_red, smer_kolona in SMEROVI:
+        protivnik = nadji_prvu_figuru(
+            tabla,
+            red + smer_red,
+            kolona + smer_kolona,
+            smer_red,
+            smer_kolona,
+            pocetni,
+            pojedeni
+        )
 
-    for smer_r, smer_k in smerovi:
-        smer_validni = []
-        jedeni = []
-
-        sledeci_red = red + smer_r
-        sledeca_kolona = kolona + smer_k
-        indeks = tabla.red_kolona_u_indeks(sledeci_red, sledeca_kolona)
-
-        ide(tabla, indeks, smer_r, smer_k, boja, smer_validni, jedeni)
-
-        if not jedeni:
+        if protivnik is None:
             continue
 
-        pojedena_figura = jedeni[0]
+        protivnicka_figura = tabla.tabla[protivnik]
 
-        if pojedena_figura in do_sada_pojedeni:
+        
+
+
+        if protivnicka_figura.oklop>0:
+            continue
+
+        if protivnicka_figura.color == figura.color:
+            continue
+
+        protivnik_red, protivnik_kolona = (
+            tabla.indeks_u_red_kolonu(protivnik)
+        )
+
+        
+        if figura.ima_relikviju("topuz"):
+            rezultat[protivnik] = [protivnik]
+            continue
+
+        sletanje = tabla.red_kolona_u_indeks(
+                protivnik_red + smer_red,
+                protivnik_kolona + smer_kolona
+            )
+
+        if sletanje is None:
+            continue
+
+        if zauzeto(tabla, sletanje, pocetni, pojedeni):
             continue
 
         nasao_nastavak = True
+        novi_pojedeni = pojedeni + [protivnik]
 
-        for sletanje in smer_validni:
-            novi_pojedeni = do_sada_pojedeni + [pojedena_figura]
+        trazi_jedenja(
+            tabla,
+            figura,
+            sletanje,
+            pocetni,
+            novi_pojedeni,
+            rezultat
+        )
 
-            dublji_validni = []
-            dublji_pojedeni = {}
+    if pojedeni and not nasao_nastavak:
+        prethodni = rezultat.get(trenutni, [])
 
-            lancano_kraljevic(
-                tabla,
-                sletanje,
-                boja,
-                novi_pojedeni,
-                dublji_validni,
-                dublji_pojedeni
-            )
+        if len(pojedeni) > len(prethodni):
+            rezultat[trenutni] = pojedeni
 
-            if dublji_validni:
-                validni += dublji_validni
-                pojedeni.update(dublji_pojedeni)
-            else:
-                validni.append(sletanje)
-                pojedeni[sletanje] = novi_pojedeni
 
-    if not nasao_nastavak:
-        return
+def nadji_prvu_figuru(
+    tabla,
+    red,
+    kolona,
+    smer_red,
+    smer_kolona,
+    pocetni,
+    pojedeni
+):
+    indeks = tabla.red_kolona_u_indeks(red, kolona)
+
+    if indeks is None:
+        return None
+
+    if indeks == pocetni or indeks in pojedeni:
+        return nadji_prvu_figuru(
+            tabla,
+            red + smer_red,
+            kolona + smer_kolona,
+            smer_red,
+            smer_kolona,
+            pocetni,
+            pojedeni
+        )
+
+    if tabla.tabla[indeks] is not None:
+        return indeks
+
+    return nadji_prvu_figuru(
+        tabla,
+        red + smer_red,
+        kolona + smer_kolona,
+        smer_red,
+        smer_kolona,
+        pocetni,
+        pojedeni
+    )
+
+
+def zauzeto(tabla, indeks, pocetni, pojedeni):
+    if indeks == pocetni:
+        return False
+
+    if indeks in pojedeni:
+        return False
+
+    return tabla.tabla[indeks] is not None

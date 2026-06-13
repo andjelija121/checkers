@@ -2,7 +2,7 @@ import random
 import pygame
 from math import inf
 
-from figura import Figura
+from strukture.figura import Figura
 from konstante import BLACK, WHITE
 from pravila import svi_potezi
 from tabla import Tabla
@@ -17,7 +17,7 @@ class Ai:
 
         pocetak = pygame.time.get_ticks()
         limit = 3000
-        potezi = svi_potezi(tabla,BLACK)
+        potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, BLACK))
         najbolji_potez = potezi[0] if potezi else None
 
         dubina = 1
@@ -39,6 +39,8 @@ class Ai:
 
             if najbolji_potez_za_dubinu is not None:
                 najbolji_potez = najbolji_potez_za_dubinu
+                potezi.remove(najbolji_potez)
+                potezi.insert(0, najbolji_potez)
 
             dubina += 1
         
@@ -46,6 +48,8 @@ class Ai:
             return
 
         tabla.odigraj_potez(najbolji_potez)
+
+        return najbolji_potez
 
     def napravi_zobrist_tabelu(self):
         random.seed(1)
@@ -133,6 +137,34 @@ class Ai:
 
         return 5 if figura.kraljevic else 3
 
+    def sortiraj_poteze(self, tabla, potezi):
+        return sorted(
+            potezi,
+            key=lambda potez: self.ocena_redosleda_poteza(tabla, potez),
+            reverse=True
+        )
+
+    def ocena_redosleda_poteza(self, tabla, potez):
+        ocena = 0
+
+        for indeks in potez.pojedeni:
+            ocena += self.vrednost_figure(tabla.tabla[indeks]) * 100
+
+        krajnji_red, krajnja_kolona = tabla.indeks_u_red_kolonu(potez.krajnji_indeks)
+
+        if not potez.figura.kraljevic:
+            promocija = (
+                potez.figura.color == BLACK and krajnji_red == 7
+                or potez.figura.color == WHITE and krajnji_red == 0
+            )
+            if promocija:
+                ocena += 80
+
+        udaljenost_od_centra = abs(3.5 - krajnji_red) + abs(3.5 - krajnja_kolona)
+        ocena += 7 - udaljenost_od_centra
+
+        return ocena
+
     def najveca_vrednost_jedenja(self, tabla, potezi):
         najbolja = 0
 
@@ -172,6 +204,10 @@ class Ai:
             if f is not None:
                 nova_figura = Figura(f.row,f.col,f.color)
                 nova_figura.kraljevic = f.kraljevic
+                nova_figura.marko = f.marko
+                nova_figura.relikvije = list(f.relikvije)
+                nova_figura.oklop = f.oklop
+                nova_figura.kolebanje = f.kolebanje
                 nova.tabla[i] = nova_figura
         return nova
 
@@ -186,14 +222,14 @@ class Ai:
             return self.transposition_table[kljuc]
 
         if dubina ==0:
-            rezultat = self.evaluacija(tabla)
+            rezultat = self.evaluacijatest(tabla)
             self.transposition_table[kljuc] = rezultat
             return rezultat
         else:
             if maxFigura:
-                potezi = svi_potezi(tabla,BLACK)
+                potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, BLACK))
                 if not potezi:
-                    rezultat = self.evaluacija(tabla)
+                    rezultat = self.evaluacijatest(tabla)
                     self.transposition_table[kljuc] = rezultat
                     return rezultat
                 maximum = -inf
@@ -211,9 +247,9 @@ class Ai:
                     self.transposition_table[kljuc] = maximum
                 return maximum
             else:
-                potezi = svi_potezi(tabla,WHITE)
+                potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, WHITE))
                 if not potezi:
-                    rezultat = self.evaluacija(tabla)
+                    rezultat = self.evaluacijatest(tabla)
                     self.transposition_table[kljuc] = rezultat
                     return rezultat
                 minimum = inf
