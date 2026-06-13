@@ -30,7 +30,10 @@ def validni_potezi_kraljevic(tabla, figura):
     validni = []
 
     for smer_red, smer_kolona in SMEROVI:
-        sarac = figura.ima_relikviju("sarac")
+        sarac = (
+            figura.ima_relikviju("sarac")
+            and (figura.kolebanje == 0 or figura.marko)
+        )
         dodaj_prazna_polja(
             tabla,
             figura.row + smer_red,

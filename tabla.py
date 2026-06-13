@@ -175,12 +175,13 @@ class Tabla:
         indeks = self.red_kolona_u_indeks(figura.row,figura.col)
         self.tabla[indeks] = None
         novi_indeks =self.red_kolona_u_indeks(red,kolona)
-        self.tabla[novi_indeks]=figura
-        figura.row=red
-        figura.col=kolona
         for p in pojedeni:
             self.br=0
             self.tabla[p] = None
-        if red==0 or red==ROWS-1:
+        self.tabla[novi_indeks]=figura
+        figura.row=red
+        figura.col=kolona
+        if (red == 0 or red == ROWS - 1) and not figura.kraljevic:
             figura.postani_kraljevic()
+            self.br = 0
         return True

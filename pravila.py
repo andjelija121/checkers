@@ -48,6 +48,8 @@ def validni_potezi(tabla, figura):
 
         elif tabla.tabla[novi_indeks] is not None and tabla.tabla[novi_indeks].color != figura.color and figura.kolebanje==0:
             if figura.ima_relikviju("topuz"):
+                    if tabla.tabla[novi_indeks].oklop > 0:
+                        continue
                     if not moranje:
                         validni=[]
                         moranje=True

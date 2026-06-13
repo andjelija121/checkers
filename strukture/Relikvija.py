@@ -99,4 +99,7 @@ class TriTovaraBlaga(Relikvija):
         )
 
     def aktiviraj(self, igra, figura):
+        bila_kraljevic = figura.kraljevic
         figura.postani_kraljevic()
+        if igra is not None and not bila_kraljevic:
+            igra.tabla.br = 0

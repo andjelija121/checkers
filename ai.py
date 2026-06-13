@@ -81,6 +81,25 @@ class Ai:
 
         return h
 
+    def kljuc_stanja(self, tabla):
+        detalji_figura = []
+
+        for indeks, figura in enumerate(tabla.tabla):
+            if figura is None:
+                continue
+
+            detalji_figura.append((
+                indeks,
+                figura.color,
+                figura.kraljevic,
+                figura.marko,
+                tuple(sorted(relikvija.kljuc for relikvija in figura.relikvije)),
+                figura.oklop,
+                figura.kolebanje
+            ))
+
+        return self.zobrist_hash(tabla), tuple(detalji_figura)
+
     def evaluacijatest(self, tabla):
         return 0
 
@@ -216,7 +235,7 @@ class Ai:
         if pygame.time.get_ticks() - pocetak >= limit:
             raise TimeoutError
 
-        kljuc = (self.zobrist_hash(tabla),dubina,maxFigura)
+        kljuc = (self.kljuc_stanja(tabla),dubina,maxFigura)
 
         if kljuc in self.transposition_table:
             return self.transposition_table[kljuc]

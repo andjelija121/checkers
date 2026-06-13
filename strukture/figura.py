@@ -15,7 +15,6 @@ class Figura:
         self.relikvije = []
         self.oklop = 0
         self.kolebanje = 0
-        self.sarac_skok=False
 
     def postani_kraljevic(self):
         self.kraljevic = True
@@ -50,19 +49,31 @@ class Figura:
         if self.kraljevic:
             self.nacrtaj_kraljevica(prozor, x, y, radius, is_white)
 
+        if self.marko:
+            self.nacrtaj_marka(prozor, x, y, radius)
+
         self.nacrtaj_oznake_relikvija(prozor, x, y, radius)
 
     def nacrtaj_oznake_relikvija(self, prozor, x, y, radius):
         if not self.relikvije:
             return
 
-        broj_oznaka = min(len(self.relikvije), 5)
+        jedinstvene_relikvije = []
+        vidjeni_kljucevi = set()
+
+        for relikvija in self.relikvije:
+            if relikvija.kljuc in vidjeni_kljucevi:
+                continue
+            vidjeni_kljucevi.add(relikvija.kljuc)
+            jedinstvene_relikvije.append(relikvija)
+
+        broj_oznaka = len(jedinstvene_relikvije)
         razmak = 18
         pocetak_x = x - ((broj_oznaka - 1) * razmak) // 2
         oznaka_y = y + radius - 1
         font = pygame.font.SysFont("arial", 11, bold=True)
 
-        for i, relikvija in enumerate(self.relikvije[:5]):
+        for i, relikvija in enumerate(jedinstvene_relikvije):
             centar = (pocetak_x + i * razmak, oznaka_y)
             boja = getattr(relikvija, "boja", GOLD)
             oznaka = getattr(relikvija, "oznaka", "?")
@@ -71,6 +82,12 @@ class Figura:
             pygame.draw.circle(prozor, boja, centar, 7)
             tekst = font.render(oznaka, True, (255, 250, 235))
             prozor.blit(tekst, tekst.get_rect(center=centar))
+
+    def nacrtaj_marka(self, prozor, x, y, radius):
+        pygame.draw.circle(prozor, (175, 28, 28), (x, y), radius - 5, 4)
+        font = pygame.font.SysFont("arial", 17, bold=True)
+        oznaka = font.render("М", True, (255, 235, 170))
+        prozor.blit(oznaka, oznaka.get_rect(center=(x, y + 17)))
 
     def nacrtaj_kraljevica(self, prozor, x, y, radius, is_white):
         ring_r = int(radius * 0.62)

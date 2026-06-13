@@ -246,7 +246,9 @@ class Igra:
             self.ai_ceka_do = None
 
     def undo_potez(self):
-        if self.na_potezu == BLACK and self.ai_ceka_do is not None:
+        if self.ceka_izbor_relikvije is not None:
+            broj_poteza_za_vracanje = 1
+        elif self.na_potezu == BLACK and self.ai_ceka_do is not None:
             broj_poteza_za_vracanje = 1
         elif self.na_potezu == WHITE:
             broj_poteza_za_vracanje = 2
@@ -272,6 +274,7 @@ class Igra:
         self.pobednik = None
         self.nereseno = False
         self.ceka_izbor_relikvije = None
+        self.pripremi_belog_igraca()
         return True
 
     def napravi_undo_stanje(self):
@@ -313,9 +316,6 @@ class Igra:
         for figura in self.tabla.tabla:
             if figura is None:
                 continue
-
-            if figura.color == odigrala_boja and figura.ima_relikviju("sarac"):
-                figura.sarac_skok = True
 
             if figura.color == odigrala_boja:
                 if figura.kolebanje > 0:

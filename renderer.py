@@ -316,9 +316,9 @@ def nacrtaj_kraj_igre(prozor, pobednik, nereseno=False):
     dugme_font = pygame.font.SysFont("arial", 28, bold=True)
 
     if nereseno:
-        tekst = "Nereseno"
+        tekst = "Нерешено"
     else:
-        tekst = "Ti si pobedio" if pobednik == WHITE else "Izgubio si"
+        tekst = "Победио си" if pobednik == WHITE else "Изгубио си"
     naslov = naslov_font.render(tekst, True, BEIGE)
     naslov_rect = naslov.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 45))
     prozor.blit(naslov, naslov_rect)
@@ -326,7 +326,7 @@ def nacrtaj_kraj_igre(prozor, pobednik, nereseno=False):
     pygame.draw.rect(prozor, BEIGE, IGRAJ_OPET_RECT, border_radius=8)
     pygame.draw.rect(prozor, GOLD, IGRAJ_OPET_RECT, 3, border_radius=8)
 
-    dugme = dugme_font.render("Igraj opet", True, BROWN)
+    dugme = dugme_font.render("Играј опет", True, BROWN)
     dugme_rect = dugme.get_rect(center=IGRAJ_OPET_RECT.center)
     prozor.blit(dugme, dugme_rect)
 
