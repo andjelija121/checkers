@@ -72,12 +72,12 @@ class Igra:
 
         indeks = self.tabla.red_kolona_u_indeks(red, kolona)
         kliknuta_figura = self.tabla.uzmi_figuru(red, kolona)
-
-        if (
-            self.obavezni_potezi_po_odredistu
+        klik_na_obavezno_odrediste = (
+            indeks is not None
             and indeks in self.obavezni_potezi_po_odredistu
-            and kliknuta_figura is None
-        ):
+        )
+
+        if klik_na_obavezno_odrediste:
             potez = self.obavezni_potezi_po_odredistu[indeks]
             self.tabla.izabrana_figura = potez.figura
             self.obavezna_figura = potez.figura
@@ -94,6 +94,7 @@ class Igra:
             self.figure_koje_moraju_da_jedu
             and kliknuta_figura is not None
             and kliknuta_figura not in self.figure_koje_moraju_da_jedu
+            and not klik_na_obavezno_odrediste
         ):
             return False
 
@@ -102,7 +103,9 @@ class Igra:
 
         if self.obavezna_figura is None:
             odigrano = self.tabla.izaberi(red, kolona)
-        elif indeks is not None and self.tabla.tabla[indeks] is None:
+        elif indeks is not None and (
+            self.tabla.tabla[indeks] is None or klik_na_obavezno_odrediste
+        ):
             odigrano = self.tabla.izaberi(red, kolona)
             self.obavezna_figura = None
         else:

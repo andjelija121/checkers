@@ -59,6 +59,7 @@ def nacrtaj(igra, prozor):
         if figura is not None:
             figura.nacrtaj(prozor)
 
+    nacrtaj_zauzeta_validna_odredista(igra, prozor)
     nacrtaj_animaciju_jedenja(tabla, prozor)
     nacrtaj_animaciju_undo(tabla, prozor)
     nacrtaj_izabranu_figuru(tabla, prozor)
@@ -195,12 +196,41 @@ def nacrtaj_validne_poteze(igra, prozor):
         return
 
     for indeks in validni:
+        if tabla.tabla[indeks] is not None:
+            continue
+
         red, kolona = tabla.indeks_u_red_kolonu(indeks)
         x = kolona * SQUARE_SIZE + SQUARE_SIZE // 2
         y = red * SQUARE_SIZE + SQUARE_SIZE // 2
 
         pygame.draw.circle(prozor, LIGHT_GOLD, (x, y), 20 + puls, 4)
         pygame.draw.circle(prozor, GOLD, (x, y), 8)
+
+
+def nacrtaj_zauzeta_validna_odredista(igra, prozor):
+    tabla = igra.tabla
+
+    if igra.obavezni_potezi_po_odredistu and tabla.izabrana_figura is None:
+        validni = list(igra.obavezni_potezi_po_odredistu.keys())
+    elif tabla.izabrana_figura is not None:
+        validni, *_ = pravila.validni_potezi(tabla, tabla.izabrana_figura)
+    else:
+        return
+
+    vreme = pygame.time.get_ticks()
+    puls = int(2 + 2 * abs((vreme % 900) / 450 - 1))
+
+    for indeks in validni:
+        if tabla.tabla[indeks] is None:
+            continue
+
+        red, kolona = tabla.indeks_u_red_kolonu(indeks)
+        x = kolona * SQUARE_SIZE + SQUARE_SIZE // 2
+        y = red * SQUARE_SIZE + SQUARE_SIZE // 2
+        radius = SQUARE_SIZE // 2 - 5 + puls
+
+        pygame.draw.circle(prozor, LIGHT_GOLD, (x, y), radius, 5)
+        pygame.draw.circle(prozor, GOLD, (x, y), radius - 7, 3)
 
 
 def nacrtaj_animaciju_jedenja(tabla, prozor):
