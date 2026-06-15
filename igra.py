@@ -238,38 +238,15 @@ class Igra:
             self.ai_ceka_do = None
             self.pripremi_belog_igraca()
 
-        self.preskoci_potez_ako_je_igrac_blokiran(odigrala_boja)
-
         self.zabelezi_replay_potez(odigrala_boja)
 
     def proveri_pobednika(self, boja_na_potezu):
-        if any(
-            figura is not None and figura.color == boja_na_potezu
-            for figura in self.tabla.tabla
-        ):
+        if svi_potezi(self.tabla, boja_na_potezu):
             return False
 
         self.pobednik = BLACK if boja_na_potezu == WHITE else WHITE
         self.na_potezu = None
         self.ai_ceka_do = None
-        return True
-
-    def preskoci_potez_ako_je_igrac_blokiran(self, prethodna_boja):
-        if svi_potezi(self.tabla, self.na_potezu):
-            return False
-
-        if not svi_potezi(self.tabla, prethodna_boja):
-            self.nereseno = True
-            self.na_potezu = None
-            self.ai_ceka_do = None
-            return True
-
-        self.na_potezu = prethodna_boja
-        if prethodna_boja == WHITE:
-            self.ai_ceka_do = None
-            self.pripremi_belog_igraca()
-        else:
-            self.ai_ceka_do = self.vreme_za_ai_potez()
         return True
 
     def vreme_za_ai_potez(self):
