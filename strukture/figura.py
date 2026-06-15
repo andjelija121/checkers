@@ -25,10 +25,14 @@ class Figura:
                 return True
         return False
 
-    def nacrtaj(self, prozor):
+    def nacrtaj(self, prozor, x=None, y=None):
         radius = SQUARE_SIZE // 2 - self.PADDING
-        x = self.col * SQUARE_SIZE + SQUARE_SIZE // 2
-        y = self.row * SQUARE_SIZE + SQUARE_SIZE // 2
+        if x is None:
+            x = self.col * SQUARE_SIZE + SQUARE_SIZE // 2
+        if y is None:
+            y = self.row * SQUARE_SIZE + SQUARE_SIZE // 2
+        x = int(x)
+        y = int(y)
 
         is_white = self.color == (232, 216, 192)
         border_color = (196, 168, 130) if is_white else (10, 6, 6)
@@ -55,33 +59,43 @@ class Figura:
         self.nacrtaj_oznake_relikvija(prozor, x, y, radius)
 
     def nacrtaj_oznake_relikvija(self, prozor, x, y, radius):
-        if not self.relikvije:
+        if not self.relikvije and self.oklop <= 0 and self.kolebanje <= 0:
             return
 
-        jedinstvene_relikvije = []
-        vidjeni_kljucevi = set()
-
-        for relikvija in self.relikvije:
-            if relikvija.kljuc in vidjeni_kljucevi:
-                continue
-            vidjeni_kljucevi.add(relikvija.kljuc)
-            jedinstvene_relikvije.append(relikvija)
-
+        jedinstvene_relikvije = self.oznake_relikvija()
         broj_oznaka = len(jedinstvene_relikvije)
         razmak = 18
         pocetak_x = x - ((broj_oznaka - 1) * razmak) // 2
         oznaka_y = y + radius - 1
         font = pygame.font.SysFont("arial", 11, bold=True)
 
-        for i, relikvija in enumerate(jedinstvene_relikvije):
+        for i, (boja, oznaka) in enumerate(jedinstvene_relikvije):
             centar = (pocetak_x + i * razmak, oznaka_y)
-            boja = getattr(relikvija, "boja", GOLD)
-            oznaka = getattr(relikvija, "oznaka", "?")
 
             pygame.draw.circle(prozor, (32, 22, 18), centar, 9)
             pygame.draw.circle(prozor, boja, centar, 7)
             tekst = font.render(oznaka, True, (255, 250, 235))
             prozor.blit(tekst, tekst.get_rect(center=centar))
+
+    def oznake_relikvija(self):
+        jedinstvene_relikvije = []
+        vidjeni_kljucevi = set()
+
+        for relikvija in self.relikvije:
+            if relikvija.kljuc == "toka":
+                continue
+            if relikvija.kljuc in vidjeni_kljucevi:
+                continue
+            vidjeni_kljucevi.add(relikvija.kljuc)
+            oznaka = "M" if relikvija.kljuc == "mesina" else relikvija.oznaka
+            jedinstvene_relikvije.append((relikvija.boja, oznaka))
+
+        if self.oklop > 0:
+            jedinstvene_relikvije.append(((105, 170, 205), "O"))
+        if self.kolebanje > 0:
+            jedinstvene_relikvije.append(((155, 55, 80), "K"))
+
+        return jedinstvene_relikvije
 
     def nacrtaj_marka(self, prozor, x, y, radius):
         pygame.draw.circle(prozor, (175, 28, 28), (x, y), radius - 5, 4)

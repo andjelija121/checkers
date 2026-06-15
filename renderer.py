@@ -6,7 +6,8 @@ from konstante import (
 import pravila
 
 
-IGRAJ_OPET_RECT = pygame.Rect(WIDTH // 2 - 95, HEIGHT // 2 + 45, 190, 52)
+IGRAJ_OPET_RECT = pygame.Rect(WIDTH // 2 - 205, HEIGHT // 2 + 45, 190, 52)
+REPLAY_RECT = pygame.Rect(WIDTH // 2 + 15, HEIGHT // 2 + 45, 190, 52)
 POCETAK_DRUMA_RECT = pygame.Rect(WIDTH // 2 - 285, TABLA_VISINA // 2 - 35, 250, 145)
 KRAJ_DRUMA_RECT = pygame.Rect(WIDTH // 2 + 35, TABLA_VISINA // 2 - 35, 250, 145)
 BRAZDE = {(3, 0), (4, 7)}
@@ -55,16 +56,24 @@ def nacrtaj(igra, prozor):
     nacrtaj_polja(tabla, prozor)
     nacrtaj_validne_poteze(igra, prozor)
 
+    animirana_figura = None
+    if tabla.animacija_pomeranja is not None:
+        animirana_figura = tabla.animacija_pomeranja[0]
+
     for figura in tabla.tabla:
         if figura is not None:
+            if figura is animirana_figura:
+                continue
             figura.nacrtaj(prozor)
 
+    nacrtaj_animaciju_pomeranja(tabla, prozor)
     nacrtaj_zauzeta_validna_odredista(igra, prozor)
     nacrtaj_animaciju_jedenja(tabla, prozor)
     nacrtaj_animaciju_undo(tabla, prozor)
     nacrtaj_izabranu_figuru(tabla, prozor)
     nacrtaj_carev_drum(igra, prozor)
     nacrtaj_poruku_relikvije(igra, prozor)
+    nacrtaj_replay_status(igra, prozor)
 
     if igra.ceka_izbor_relikvije is not None:
         nacrtaj_izbor_relikvije(igra, prozor)
@@ -268,6 +277,27 @@ def nacrtaj_animaciju_jedenja(tabla, prozor):
     tabla.animacija_jedenja = aktivne
 
 
+def nacrtaj_animaciju_pomeranja(tabla, prozor):
+    animacija = tabla.animacija_pomeranja
+    if animacija is None:
+        return
+
+    figura, pocetni, krajnji, pocetak, trajanje = animacija
+    proslo = pygame.time.get_ticks() - pocetak
+    if proslo >= trajanje:
+        tabla.animacija_pomeranja = None
+        figura.nacrtaj(prozor)
+        return
+
+    pocetni_red, pocetna_kolona = tabla.indeks_u_red_kolonu(pocetni)
+    krajnji_red, krajnja_kolona = tabla.indeks_u_red_kolonu(krajnji)
+    napredak = max(0.0, min(1.0, proslo / trajanje))
+    napredak = napredak * napredak * (3 - 2 * napredak)
+    x = (pocetna_kolona + (krajnja_kolona - pocetna_kolona) * napredak) * SQUARE_SIZE + SQUARE_SIZE // 2
+    y = (pocetni_red + (krajnji_red - pocetni_red) * napredak) * SQUARE_SIZE + SQUARE_SIZE // 2
+    figura.nacrtaj(prozor, x=x, y=y)
+
+
 def nacrtaj_animaciju_undo(tabla, prozor):
     if not hasattr(tabla, "animacija_undo"):
         return
@@ -360,6 +390,41 @@ def nacrtaj_kraj_igre(prozor, pobednik, nereseno=False):
     dugme_rect = dugme.get_rect(center=IGRAJ_OPET_RECT.center)
     prozor.blit(dugme, dugme_rect)
 
+    pygame.draw.rect(prozor, BEIGE, REPLAY_RECT, border_radius=8)
+    pygame.draw.rect(prozor, GOLD, REPLAY_RECT, 3, border_radius=8)
+    replay = dugme_font.render("ПРИКАЖИ ОПЕТ", True, BROWN)
+    prozor.blit(replay, replay.get_rect(center=REPLAY_RECT.center))
+
+
+def animacije_u_toku(tabla):
+    return bool(
+        tabla.animacija_pomeranja is not None
+        or tabla.animacija_jedenja
+        or tabla.animacija_undo
+    )
+
 
 def klik_na_igraj_opet(pos):
     return IGRAJ_OPET_RECT.collidepoint(pos)
+
+
+def klik_na_replay(pos):
+    return REPLAY_RECT.collidepoint(pos)
+
+
+def nacrtaj_replay_status(igra, prozor):
+    if not igra.replay_aktivan:
+        return
+
+    ukupno = len(igra.replay_dogadjaji)
+    trenutno = min(igra.replay_indeks, ukupno)
+    panel = pygame.Rect(12, 12, 270, 58)
+    pygame.draw.rect(prozor, (48, 31, 24), panel, border_radius=8)
+    pygame.draw.rect(prozor, GOLD, panel, 3, border_radius=8)
+
+    font = pygame.font.SysFont("arial", 18, bold=True)
+    mali_font = pygame.font.SysFont("arial", 14)
+    naslov = font.render(f"ПРИКАЗ {trenutno}/{ukupno}", True, LIGHT_GOLD)
+    opis = mali_font.render(igra.replay_opis, True, BEIGE)
+    prozor.blit(naslov, (panel.x + 12, panel.y + 7))
+    prozor.blit(opis, (panel.x + 12, panel.y + 32))

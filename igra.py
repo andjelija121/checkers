@@ -5,6 +5,8 @@ from konstante import WHITE, BLACK
 from pravila import svi_potezi
 from strukture.Relikvija import MesinaRujnogVina, Relikvija, Sarac, TokaOdCelika, Topuz, TriTovaraBlaga
 from strukture.cirkularni_dek import CirkularniDek
+from strukture.figura import Figura
+from strukture.replay import ReplayDogadjaj, StabloPartije
 from tabla import Tabla
 
 
@@ -40,6 +42,23 @@ class Igra:
         self.carev_drum = CirkularniDek(relikvije)
         self.zapocni_potez()
 
+        pocetno_stanje = self.napravi_replay_stanje()
+        self.stablo_partije = StabloPartije(pocetno_stanje)
+        self.replay_dogadjaji = [
+            ReplayDogadjaj(
+                "pocetak",
+                pocetno_stanje,
+                self.stablo_partije.koren,
+                "Pocetak partije"
+            )
+        ]
+        self.replay_aktivan = False
+        self.replay_indeks = 0
+        self.replay_sledece_vreme = 0
+        self.replay_razmak = 1000
+        self.replay_opis = ""
+        self.replay_krajnji_rezultat = None
+
     def zapocni_potez(self):
         self.carev_drum.dodaj_sledeci()
 
@@ -63,6 +82,10 @@ class Igra:
             self.tabla.izabrana_figura = figure[0]
 
     def jedan_potez(self, red, kolona):
+        if self.replay_aktivan:
+            return
+        if self.tabla.animacija_pomeranja is not None:
+            return
         if self.pobednik is not None or self.nereseno:
             return
         if self.ceka_izbor_relikvije is not None:
@@ -125,6 +148,9 @@ class Igra:
             self.zavrsi_trenutni_potez()
 
     def update(self):
+        if self.replay_aktivan:
+            self.update_replay()
+            return
         if self.pobednik is not None or self.nereseno:
             return
         if self.ceka_izbor_relikvije is not None:
@@ -167,9 +193,9 @@ class Igra:
             return False
 
         if izbor == "pocetak":
-            relikvija = self.carev_drum.uzmi_prvi()
+            relikvija = self.carev_drum.prvi()
         elif izbor == "kraj":
-            relikvija = self.carev_drum.uzmi_poslednji()
+            relikvija = self.carev_drum.poslednji()
         else:
             return False
 
@@ -187,28 +213,31 @@ class Igra:
         return True
 
     def proveri_da_li_je_marko(self, figura):
-        potrebne_relikvije = {"mesina", "topuz", "sarac", "blago"}
         relikvije_figure = {relikvija.kljuc for relikvija in figura.relikvije}
 
-        if (
-            figura.ima_relikviju("mesina")
-            and figura.ima_relikviju("topuz")
-            and figura.ima_relikviju("sarac")
-            and figura.ima_relikviju("blago")
-        ):
+        osnovne_relikvije = {"mesina", "topuz", "sarac"}
+        postaje_marko = not figura.marko and osnovne_relikvije <= relikvije_figure and (
+            figura.kraljevic or "blago" in relikvije_figure
+        )
+        if postaje_marko:
             figura.marko = True
+            self.tabla.br = 0
 
     def zavrsi_trenutni_potez(self):
+        odigrala_boja = self.na_potezu
+
         if self.na_potezu == WHITE:
             protivnik = BLACK
         else:
             protivnik = WHITE
 
         if self.proveri_pobednika(protivnik):
+            self.zabelezi_replay_potez(odigrala_boja)
             return
 
         self.proveri_nereseno()
         if self.nereseno:
+            self.zabelezi_replay_potez(odigrala_boja)
             return
 
         if self.na_potezu == WHITE:
@@ -223,13 +252,38 @@ class Igra:
             self.ai_ceka_do = None
             self.pripremi_belog_igraca()
 
+        self.preskoci_potez_ako_je_igrac_blokiran(odigrala_boja)
+
+        self.zabelezi_replay_potez(odigrala_boja)
+
     def proveri_pobednika(self, boja_na_potezu):
-        if svi_potezi(self.tabla, boja_na_potezu):
+        if any(
+            figura is not None and figura.color == boja_na_potezu
+            for figura in self.tabla.tabla
+        ):
             return False
 
         self.pobednik = BLACK if boja_na_potezu == WHITE else WHITE
         self.na_potezu = None
         self.ai_ceka_do = None
+        return True
+
+    def preskoci_potez_ako_je_igrac_blokiran(self, prethodna_boja):
+        if svi_potezi(self.tabla, self.na_potezu):
+            return False
+
+        if not svi_potezi(self.tabla, prethodna_boja):
+            self.nereseno = True
+            self.na_potezu = None
+            self.ai_ceka_do = None
+            return True
+
+        self.na_potezu = prethodna_boja
+        if prethodna_boja == WHITE:
+            self.ai_ceka_do = None
+            self.pripremi_belog_igraca()
+        else:
+            self.ai_ceka_do = self.vreme_za_ai_potez()
         return True
 
     def vreme_za_ai_potez(self):
@@ -249,6 +303,8 @@ class Igra:
             self.ai_ceka_do = None
 
     def undo_potez(self):
+        if self.replay_aktivan:
+            return False
         if self.ceka_izbor_relikvije is not None:
             broj_poteza_za_vracanje = 1
         elif self.na_potezu == BLACK and self.ai_ceka_do is not None:
@@ -259,12 +315,14 @@ class Igra:
             return False
 
         vracen_bar_jedan = False
+        poslednji_undo_dogadjaj = None
         for _ in range(broj_poteza_za_vracanje):
             if self.tabla.undo_potez():
                 vracen_bar_jedan = True
                 if self.undo_stanja_igre:
                     undo_stanje = self.undo_stanja_igre.pop()
                     self.vrati_undo_stanje(undo_stanje)
+                poslednji_undo_dogadjaj = self.zabelezi_replay_undo()
 
         if not vracen_bar_jedan:
             return False
@@ -278,7 +336,143 @@ class Igra:
         self.nereseno = False
         self.ceka_izbor_relikvije = None
         self.pripremi_belog_igraca()
+
+        if poslednji_undo_dogadjaj is not None:
+            poslednji_undo_dogadjaj.stanje = self.napravi_replay_stanje()
         return True
+
+    def napravi_replay_stanje(self):
+        figure = []
+
+        for figura in self.tabla.tabla:
+            if figura is None:
+                figure.append(None)
+                continue
+
+            figure.append({
+                "row": figura.row,
+                "col": figura.col,
+                "color": figura.color,
+                "kraljevic": figura.kraljevic,
+                "marko": figura.marko,
+                "oklop": figura.oklop,
+                "kolebanje": figura.kolebanje,
+                "relikvije": [relikvija.kljuc for relikvija in figura.relikvije]
+            })
+
+        return {
+            "figure": figure,
+            "na_potezu": self.na_potezu,
+            "br": self.tabla.br,
+            "carev_drum": [relikvija.kljuc for relikvija in self.carev_drum.dek],
+            "sledeci_indeks": self.carev_drum.sledeci_indeks,
+            "pobednik": self.pobednik,
+            "nereseno": self.nereseno
+        }
+
+    def napravi_relikviju(self, kljuc):
+        klase = {
+            "toka": TokaOdCelika,
+            "mesina": MesinaRujnogVina,
+            "topuz": Topuz,
+            "sarac": Sarac,
+            "blago": TriTovaraBlaga
+        }
+        return klase[kljuc]()
+
+    def ucitaj_replay_stanje(self, stanje):
+        nova_tabla = [None] * 32
+
+        for indeks, podaci in enumerate(stanje["figure"]):
+            if podaci is None:
+                continue
+
+            figura = Figura(podaci["row"], podaci["col"], podaci["color"])
+            figura.kraljevic = podaci["kraljevic"]
+            figura.marko = podaci["marko"]
+            figura.oklop = podaci["oklop"]
+            figura.kolebanje = podaci["kolebanje"]
+            figura.relikvije = [
+                self.napravi_relikviju(kljuc)
+                for kljuc in podaci["relikvije"]
+            ]
+            nova_tabla[indeks] = figura
+
+        self.tabla.tabla = nova_tabla
+        self.tabla.br = stanje["br"]
+        self.tabla.izabrana_figura = None
+        self.tabla.animacija_jedenja = []
+        self.tabla.animacija_pomeranja = None
+        self.tabla.animacija_undo = []
+
+        self.carev_drum.dek = [
+            self.napravi_relikviju(kljuc)
+            for kljuc in stanje["carev_drum"]
+        ]
+        self.carev_drum.sledeci_indeks = stanje["sledeci_indeks"]
+
+        self.na_potezu = stanje["na_potezu"]
+        self.pobednik = stanje["pobednik"]
+        self.nereseno = stanje["nereseno"]
+        self.ai_ceka_do = None
+        self.obavezna_figura = None
+        self.figure_koje_moraju_da_jedu = []
+        self.obavezni_potezi_po_odredistu = {}
+        self.ceka_izbor_relikvije = None
+        self.poslednja_relikvija = None
+        self.poruka_relikvije_do = 0
+
+    def zabelezi_replay_potez(self, boja):
+        stanje = self.napravi_replay_stanje()
+        naziv = "Beli" if boja == WHITE else "Crni"
+        opis = f"{naziv} potez"
+        cvor = self.stablo_partije.dodaj_potez(stanje, opis)
+        self.replay_dogadjaji.append(
+            ReplayDogadjaj("potez", stanje, cvor, opis)
+        )
+
+    def zabelezi_replay_undo(self):
+        if not self.stablo_partije.undo():
+            return None
+
+        stanje = self.napravi_replay_stanje()
+        dogadjaj = ReplayDogadjaj(
+            "undo",
+            stanje,
+            self.stablo_partije.trenutni,
+            "Undo poteza"
+        )
+        self.replay_dogadjaji.append(dogadjaj)
+        return dogadjaj
+
+    def pokreni_replay(self):
+        if len(self.replay_dogadjaji) <= 1:
+            return False
+
+        self.replay_krajnji_rezultat = (self.pobednik, self.nereseno)
+        self.replay_aktivan = True
+        self.replay_indeks = 0
+        self.replay_sledece_vreme = pygame.time.get_ticks()
+        self.replay_opis = "Pocetak partije"
+        self.ai_ceka_do = None
+        return True
+
+    def update_replay(self):
+        sada = pygame.time.get_ticks()
+        if sada < self.replay_sledece_vreme:
+            return
+
+        if self.replay_indeks >= len(self.replay_dogadjaji):
+            self.replay_aktivan = False
+            if self.replay_krajnji_rezultat is not None:
+                self.pobednik, self.nereseno = self.replay_krajnji_rezultat
+            return
+
+        dogadjaj = self.replay_dogadjaji[self.replay_indeks]
+        self.ucitaj_replay_stanje(dogadjaj.stanje)
+        self.replay_opis = dogadjaj.opis
+        self.replay_indeks += 1
+        self.replay_sledece_vreme = sada + self.replay_razmak
 
     def napravi_undo_stanje(self):
         stanja_figura = []

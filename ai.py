@@ -8,6 +8,31 @@ from pravila import svi_potezi
 from tabla import Tabla
 
 class Ai:
+    OBICNA_FIGURA = 3.0
+    KRALJEVIC = 5.5
+    MARKO = 4.0
+    OKLOP_PO_POTEZU = 1.25
+    KOLEBANJE_PO_POTEZU = 0.9
+    NAPREDOVANJE = 0.12
+    IVICA = 0.18
+    CENTAR = 0.22
+    BRAZDA = 0.65
+    MOBILNOST = 0.06
+    DOSTUPNO_JEDENJE = 0.35
+    NAJBOLJE_JEDENJE = 0.75
+    POBEDA = 10000
+
+    VREDNOST_RELIKVIJE = {
+        "topuz": 1.15,
+        "sarac": 0.85,
+        "toka": 0.25,
+        "mesina": 0.25,
+        "blago": 1.50,
+    }
+
+    MARKOVE_RELIKVIJE = {"mesina", "topuz", "sarac"}
+    BRAZDE = {(3, 0), (4, 7)}
+
     def __init__(self):
         self.transposition_table = {}
         self.zobrist = self.napravi_zobrist_tabelu()
@@ -16,9 +41,18 @@ class Ai:
         self.transposition_table = {}
 
         pocetak = pygame.time.get_ticks()
-        limit = 3000
         potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, BLACK))
         najbolji_potez = potezi[0] if potezi else None
+
+        if najbolji_potez is None:
+            return None
+
+        if len(potezi) == 1:
+            tabla.odigraj_potez(najbolji_potez)
+            return najbolji_potez
+
+        obavezno_jedenje = all(potez.pojedeni for potez in potezi)
+        limit = 500 if obavezno_jedenje and len(potezi) <= 2 else 3000
 
         dubina = 1
 
@@ -44,9 +78,6 @@ class Ai:
 
             dubina += 1
         
-        if najbolji_potez is None:
-            return
-
         tabla.odigraj_potez(najbolji_potez)
 
         return najbolji_potez
@@ -100,32 +131,32 @@ class Ai:
 
         return self.zobrist_hash(tabla), tuple(detalji_figura)
 
-    def evaluacijatest(self, tabla):
-        return 0
+
 
     def evaluacija(self, tabla):
-        score = 0
+        score = 0.0
 
         for i, figura in enumerate(tabla.tabla):
             if figura is None:
                 continue
 
             red, kolona = tabla.indeks_u_red_kolonu(i)
-            vrednost = 3 if not figura.kraljevic else 5
+            vrednost = self.vrednost_figure(figura)
 
             if not figura.kraljevic:
                 if figura.color == BLACK:
-                    vrednost += red * 0.1
+                    vrednost += red * self.NAPREDOVANJE
                 else:
-                    vrednost += (7 - red) * 0.1
-
+                    vrednost += (7 - red) * self.NAPREDOVANJE
 
             if kolona == 0 or kolona == 7:
-                vrednost += 0.5
-
+                vrednost += self.IVICA
 
             if 2 <= kolona <= 5:
-                vrednost += 0.3
+                vrednost += self.CENTAR
+
+            if (red, kolona) in self.BRAZDE:
+                vrednost += self.BRAZDA
 
             if figura.color == BLACK:
                 score += vrednost
@@ -134,27 +165,46 @@ class Ai:
 
         black_potezi_lista = svi_potezi(tabla, BLACK)
         white_potezi_lista = svi_potezi(tabla, WHITE)
+
+        if not black_potezi_lista and white_potezi_lista:
+            return -self.POBEDA
+        if not white_potezi_lista and black_potezi_lista:
+            return self.POBEDA
+
         black_potezi = len(black_potezi_lista)
         white_potezi = len(white_potezi_lista)
-        score += (black_potezi - white_potezi) * 0.05
-
+        score += (black_potezi - white_potezi) * self.MOBILNOST
 
         black_jedenja = sum(len(p.pojedeni) for p in black_potezi_lista if p.pojedeni)
         white_jedenja = sum(len(p.pojedeni) for p in white_potezi_lista if p.pojedeni)
-        score += (black_jedenja - white_jedenja) * 1.4
+        score += (black_jedenja - white_jedenja) * self.DOSTUPNO_JEDENJE
 
         najveca_black_prilika = self.najveca_vrednost_jedenja(tabla, black_potezi_lista)
         najveca_white_prilika = self.najveca_vrednost_jedenja(tabla, white_potezi_lista)
-        score += najveca_black_prilika * 0.8
-        score -= najveca_white_prilika * 2.2
+        score += (najveca_black_prilika - najveca_white_prilika) * self.NAJBOLJE_JEDENJE
 
         return score
 
     def vrednost_figure(self, figura):
         if figura is None:
-            return 0
+            return 0.0
 
-        return 5 if figura.kraljevic else 3
+        vrednost = self.KRALJEVIC if figura.kraljevic else self.OBICNA_FIGURA
+
+        if figura.marko:
+            vrednost += self.MARKO
+
+        kljucevi = {relikvija.kljuc for relikvija in figura.relikvije}
+        vrednost += sum(self.VREDNOST_RELIKVIJE.get(kljuc, 0.0) for kljuc in kljucevi)
+
+        broj_markovih = len(kljucevi & self.MARKOVE_RELIKVIJE)
+        vrednost += broj_markovih * broj_markovih * 0.12
+
+        vrednost += figura.oklop * self.OKLOP_PO_POTEZU
+        if not figura.marko:
+            vrednost -= figura.kolebanje * self.KOLEBANJE_PO_POTEZU
+
+        return vrednost
 
     def sortiraj_poteze(self, tabla, potezi):
         return sorted(
@@ -217,6 +267,7 @@ class Ai:
         nova.tabla = [None] * 32
         nova.izabrana_figura = None
         nova.animacija_jedenja = []
+        nova.animacija_pomeranja = None
         nova.animacije_ukljucene = False
         nova.br = tabla.br
         for i,f in enumerate(tabla.tabla):
@@ -241,14 +292,14 @@ class Ai:
             return self.transposition_table[kljuc]
 
         if dubina ==0:
-            rezultat = self.evaluacijatest(tabla)
+            rezultat = self.evaluacija(tabla)
             self.transposition_table[kljuc] = rezultat
             return rezultat
         else:
             if maxFigura:
                 potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, BLACK))
                 if not potezi:
-                    rezultat = self.evaluacijatest(tabla)
+                    rezultat = self.evaluacija(tabla)
                     self.transposition_table[kljuc] = rezultat
                     return rezultat
                 maximum = -inf
@@ -268,7 +319,7 @@ class Ai:
             else:
                 potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, WHITE))
                 if not potezi:
-                    rezultat = self.evaluacijatest(tabla)
+                    rezultat = self.evaluacija(tabla)
                     self.transposition_table[kljuc] = rezultat
                     return rezultat
                 minimum = inf

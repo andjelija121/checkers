@@ -31,8 +31,19 @@ def main():
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
-                if (igra.pobednik is not None or igra.nereseno) and renderer.klik_na_igraj_opet(pos):
-                    igra.resetuj()
+                kraj_prikazan = (
+                    (igra.pobednik is not None or igra.nereseno)
+                    and not renderer.animacije_u_toku(igra.tabla)
+                )
+                if kraj_prikazan:
+                    if renderer.klik_na_igraj_opet(pos):
+                        igra.resetuj()
+                        continue
+                    if renderer.klik_na_replay(pos):
+                        igra.pokreni_replay()
+                        continue
+
+                if igra.replay_aktivan:
                     continue
 
                 if igra.ceka_izbor_relikvije is not None:
@@ -45,12 +56,13 @@ def main():
                 igra.jedan_potez(red,kolona)
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_u:
+                if event.key == pygame.K_u and not igra.replay_aktivan:
                     igra.undo_potez()
 
         igra.update()
         renderer.nacrtaj(igra, PROZOR)
-        renderer.nacrtaj_kraj_igre(PROZOR, igra.pobednik, igra.nereseno)
+        if not igra.replay_aktivan and not renderer.animacije_u_toku(igra.tabla):
+            renderer.nacrtaj_kraj_igre(PROZOR, igra.pobednik, igra.nereseno)
         pygame.display.update()
 
     pygame.quit()

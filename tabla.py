@@ -13,6 +13,7 @@ class Tabla:
         self.stek =  Stek()
         self.izabrana_figura = None
         self.animacija_jedenja = []
+        self.animacija_pomeranja = None
         self.animacija_undo = []
         self.animacije_ukljucene = True
         self.br=0
@@ -148,6 +149,7 @@ class Tabla:
         figura.marko = undo.marko_pre
         self.izabrana_figura = None
         self.animacija_jedenja=[]
+        self.animacija_pomeranja = None
 
         return True
 
@@ -169,8 +171,19 @@ class Tabla:
                         pojedena_figura.kraljevic,
                         sada + i * 260
                     ))
+
+            if pojedeni:
+                pocetni_indeks = self.red_kolona_u_indeks(figura.row, figura.col)
+                krajnji_indeks = self.red_kolona_u_indeks(red, kolona)
+                trajanje = 520 + max(0, len(pojedeni) - 1) * 260
+                self.animacija_pomeranja = (
+                    figura, pocetni_indeks, krajnji_indeks, sada, trajanje
+                )
+            else:
+                self.animacija_pomeranja = None
         else:
             self.animacija_jedenja = []
+            self.animacija_pomeranja = None
         self.br+=1
         indeks = self.red_kolona_u_indeks(figura.row,figura.col)
         self.tabla[indeks] = None
