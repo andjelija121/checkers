@@ -8,13 +8,16 @@ from pravila import svi_potezi
 from tabla import Tabla
 
 class Ai:
+    LIMIT_PRETRAGE_MS = 1800
+    LIMIT_KRATKOG_JEDENJA_MS = 500
     OBICNA_FIGURA = 3.0
     KRALJEVIC = 5.5
     MARKO = 4.0
     OKLOP_PO_POTEZU = 1.25
     KOLEBANJE_PO_POTEZU = 0.9
     NAPREDOVANJE = 0.12
-    IVICA = 0.18
+    IVICA = 0.28
+    UGAO = 0.55
     CENTAR = 0.22
     BRAZDA = 0.65
     MOBILNOST = 0.06
@@ -32,6 +35,7 @@ class Ai:
 
     MARKOVE_RELIKVIJE = {"mesina", "topuz", "sarac"}
     BRAZDE = {(3, 0), (4, 7)}
+    UGLOVI = {(0, 7), (7, 0)}
 
     def __init__(self):
         self.transposition_table = {}
@@ -52,7 +56,11 @@ class Ai:
             return najbolji_potez
 
         obavezno_jedenje = all(potez.pojedeni for potez in potezi)
-        limit = 500 if obavezno_jedenje and len(potezi) <= 2 else 3000
+        limit = (
+            self.LIMIT_KRATKOG_JEDENJA_MS
+            if obavezno_jedenje and len(potezi) <= 2
+            else self.LIMIT_PRETRAGE_MS
+        )
 
         dubina = 1
 
@@ -83,18 +91,27 @@ class Ai:
         return najbolji_potez
 
     def napravi_zobrist_tabelu(self):
-        random.seed(1)
+        generator = random.Random(1)
         tabela = []
 
         for indeks in range(32):
             tabela.append({
-                "BLACK": random.getrandbits(64),
-                "BLACK_KRALJEVIC": random.getrandbits(64),
-                "WHITE": random.getrandbits(64),
-                "WHITE_KRALJEVIC": random.getrandbits(64),
+                "BLACK": generator.getrandbits(64),
+                "WHITE": generator.getrandbits(64),
+                "KRALJEVIC": generator.getrandbits(64),
+                "MARKO": generator.getrandbits(64),
+                "RELIKVIJE": {
+                    kljuc: generator.getrandbits(64)
+                    for kljuc in self.VREDNOST_RELIKVIJE
+                },
+                "OKLOP": [generator.getrandbits(64) for _ in range(3)],
+                "KOLEBANJE": [generator.getrandbits(64) for _ in range(3)],
             })
 
-        return tabela
+        return {
+            "polja": tabela,
+            "remi": [generator.getrandbits(64) for _ in range(41)],
+        }
 
     def zobrist_hash(self, tabla):
         h = 0
@@ -103,12 +120,20 @@ class Ai:
             if figura is None:
                 continue
 
-            if figura.color == BLACK:
-                tip = "BLACK_KRALJEVIC" if figura.kraljevic else "BLACK"
-            else:
-                tip = "WHITE_KRALJEVIC" if figura.kraljevic else "WHITE"
+            polje = self.zobrist["polja"][indeks]
+            h ^= polje["BLACK" if figura.color == BLACK else "WHITE"]
+            if figura.kraljevic:
+                h ^= polje["KRALJEVIC"]
+            if figura.marko:
+                h ^= polje["MARKO"]
 
-            h ^= self.zobrist[indeks][tip]
+            for kljuc in {relikvija.kljuc for relikvija in figura.relikvije}:
+                h ^= polje["RELIKVIJE"][kljuc]
+
+            h ^= polje["OKLOP"][min(figura.oklop, 2)]
+            h ^= polje["KOLEBANJE"][min(figura.kolebanje, 2)]
+
+        h ^= self.zobrist["remi"][min(tabla.br, 40)]
 
         return h
 
@@ -129,9 +154,7 @@ class Ai:
                 figura.kolebanje
             ))
 
-        return self.zobrist_hash(tabla), tuple(detalji_figura)
-
-
+        return self.zobrist_hash(tabla), tabla.br, tuple(detalji_figura)
 
     def evaluacija(self, tabla):
         score = 0.0
@@ -149,7 +172,9 @@ class Ai:
                 else:
                     vrednost += (7 - red) * self.NAPREDOVANJE
 
-            if kolona == 0 or kolona == 7:
+            if (red, kolona) in self.UGLOVI:
+                vrednost += self.UGAO
+            elif kolona == 0 or kolona == 7:
                 vrednost += self.IVICA
 
             if 2 <= kolona <= 5:
@@ -199,6 +224,12 @@ class Ai:
 
         broj_markovih = len(kljucevi & self.MARKOVE_RELIKVIJE)
         vrednost += broj_markovih * broj_markovih * 0.12
+
+        if not figura.marko and self.MARKOVE_RELIKVIJE <= kljucevi:
+            if figura.kraljevic or "blago" in kljucevi:
+                vrednost += self.MARKO
+            else:
+                vrednost += 0.8
 
         vrednost += figura.oklop * self.OKLOP_PO_POTEZU
         if not figura.marko:
