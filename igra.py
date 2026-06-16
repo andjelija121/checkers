@@ -122,6 +122,7 @@ class Igra:
 
         if self.tabla.stek.size() > broj_poteza_pre:
             self.undo_stanja_igre.append(undo_stanje)
+            self.undo_manager.redo_stanja.clear()
 
         if odigrano and self.tabla.izabrana_figura is None:
             pomerena_figura = self.tabla.tabla[indeks]
@@ -155,6 +156,7 @@ class Igra:
 
         if self.tabla.stek.size() > broj_poteza_pre:
             self.undo_stanja_igre.append(undo_stanje)
+            self.undo_manager.redo_stanja.clear()
 
         self.zavrsi_ai_potez(ai_potez.figura)
 
@@ -267,6 +269,9 @@ class Igra:
 
     def undo_potez(self):
         return self.undo_manager.undo_potez()
+
+    def redo_potez(self):
+        return self.undo_manager.redo_potez()
 
     def napravi_replay_stanje(self):
         return self.replay_manager.napravi_stanje()

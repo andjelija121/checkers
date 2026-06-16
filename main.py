@@ -58,6 +58,8 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_u and not igra.replay_aktivan:
                     igra.undo_potez()
+                if event.key == pygame.K_r and not igra.replay_aktivan:
+                    igra.redo_potez()
 
         igra.update()
         renderer.nacrtaj(igra, PROZOR)
