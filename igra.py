@@ -91,7 +91,6 @@ class Igra:
             self.tabla.izabrana_figura = potez.figura
             self.obavezna_figura = potez.figura
 
-
         if (
             self.figure_koje_moraju_da_jedu
             and self.tabla.izabrana_figura is None
@@ -122,8 +121,6 @@ class Igra:
 
         if self.tabla.stek.size() > broj_poteza_pre:
             self.undo_stanja_igre.append(undo_stanje)
-            self.undo_manager.redo_stanja.clear()
-
         if odigrano and self.tabla.izabrana_figura is None:
             pomerena_figura = self.tabla.tabla[indeks]
             self.figure_koje_moraju_da_jedu = []
@@ -149,20 +146,20 @@ class Igra:
 
         undo_stanje = self.napravi_undo_stanje()
         broj_poteza_pre = self.tabla.stek.size()
-        ai_potez = self.ai.ai_potez(self.tabla)
+        ai_potez = self.ai.ai_potez(self.tabla, self.carev_drum)
 
         if ai_potez is None:
             return
 
         if self.tabla.stek.size() > broj_poteza_pre:
             self.undo_stanja_igre.append(undo_stanje)
-            self.undo_manager.redo_stanja.clear()
 
         self.zavrsi_ai_potez(ai_potez.figura)
 
     def zavrsi_ai_potez(self, pomerena_figura):
         if self.proveri_brazdu(pomerena_figura):
-            self.izaberi_relikviju("pocetak")
+            izbor = self.ai.poslednji_izbor_relikvije or "pocetak"
+            self.izaberi_relikviju(izbor)
             return
 
         self.zavrsi_trenutni_potez()
@@ -269,9 +266,6 @@ class Igra:
 
     def undo_potez(self):
         return self.undo_manager.undo_potez()
-
-    def redo_potez(self):
-        return self.undo_manager.redo_potez()
 
     def napravi_replay_stanje(self):
         return self.replay_manager.napravi_stanje()

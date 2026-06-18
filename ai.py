@@ -39,10 +39,13 @@ class Ai:
 
     def __init__(self):
         self.transposition_table = {}
+        self.poslednji_izbor_relikvije = None
         self.zobrist = self.napravi_zobrist_tabelu()
 
-    def ai_potez(self,tabla):
+    def ai_potez(self, tabla, carev_drum=None):
         self.transposition_table = {}
+        self.poslednji_izbor_relikvije = None
+        kopija_deka = carev_drum.kopija() if carev_drum is not None else None
 
         pocetak = pygame.time.get_ticks()
         potezi = self.sortiraj_poteze(tabla, svi_potezi(tabla, BLACK))
@@ -50,10 +53,6 @@ class Ai:
 
         if najbolji_potez is None:
             return None
-
-        if len(potezi) == 1:
-            tabla.odigraj_potez(najbolji_potez)
-            return najbolji_potez
 
         obavezno_jedenje = all(potez.pojedeni for potez in potezi)
         limit = (
@@ -67,20 +66,37 @@ class Ai:
         while pygame.time.get_ticks() - pocetak < limit:
             najbolja_ocena_za_dubinu = -inf
             najbolji_potez_za_dubinu = None
+            najbolji_izbor_za_dubinu = None
 
             try:
                 for potez in potezi:
                     nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina,-inf,+inf,False,pocetak,limit)
+                    ocena_poteza = -inf
+                    izbor_poteza = None
+
+                    for tabla_posle, dek_posle, izbor in self.stanja_posle_relikvije(
+                        nova_tabla,
+                        potez.krajnji_indeks,
+                        kopija_deka
+                    ):
+                        ocena = self.minimax(
+                            tabla_posle, dubina, -inf, +inf, False,
+                            pocetak, limit, dek_posle
+                        )
+                        if ocena > ocena_poteza:
+                            ocena_poteza = ocena
+                            izbor_poteza = izbor
                     
-                    if ocena>najbolja_ocena_za_dubinu:
-                        najbolja_ocena_za_dubinu = ocena
+                    if ocena_poteza > najbolja_ocena_za_dubinu:
+                        najbolja_ocena_za_dubinu = ocena_poteza
                         najbolji_potez_za_dubinu = potez
+                        najbolji_izbor_za_dubinu = izbor_poteza
             except TimeoutError:
                 break
 
             if najbolji_potez_za_dubinu is not None:
                 najbolji_potez = najbolji_potez_za_dubinu
+                self.poslednji_izbor_relikvije = najbolji_izbor_za_dubinu
                 potezi.remove(najbolji_potez)
                 potezi.insert(0, najbolji_potez)
 
@@ -237,6 +253,78 @@ class Ai:
 
         return vrednost
 
+    def stanja_posle_relikvije(self, tabla, indeks_figure, carev_drum):
+        if carev_drum is None:
+            return [(tabla, None, None)]
+
+        figura = tabla.tabla[indeks_figure]
+        na_brazdi = figura is not None and (figura.row, figura.col) in self.BRAZDE
+
+        if not na_brazdi or carev_drum.prazan():
+            novi_dek = carev_drum.kopija()
+            novi_dek.dodaj_sledeci()
+            return [(tabla, novi_dek, None)]
+
+        rezultati = []
+        izbori = ["pocetak"]
+        if carev_drum.velicina() > 1:
+            izbori.append("kraj")
+
+        for izbor in izbori:
+            nova_tabla = self.kopija_table(tabla)
+            nova_figura = nova_tabla.tabla[indeks_figure]
+            novi_dek = carev_drum.kopija()
+
+            if izbor == "pocetak":
+                relikvija = novi_dek.uzmi_prvi()
+            else:
+                relikvija = novi_dek.uzmi_poslednji()
+
+            self.primeni_relikviju(nova_tabla, nova_figura, relikvija)
+            novi_dek.dodaj_sledeci()
+            rezultati.append((nova_tabla, novi_dek, izbor))
+
+        return rezultati
+
+    def primeni_relikviju(self, tabla, figura, relikvija):
+        figura.relikvije.append(relikvija)
+
+        if relikvija.kljuc == "toka":
+            figura.oklop = 2 if figura.marko else 1
+        elif relikvija.kljuc == "mesina":
+            protivnici = [
+                polje for polje in tabla.tabla
+                if polje is not None and polje.color != figura.color
+            ]
+            if protivnici:
+                najblizi = min(
+                    protivnici,
+                    key=lambda protivnik: max(
+                        abs(protivnik.row - figura.row),
+                        abs(protivnik.col - figura.col)
+                    )
+                )
+                if not najblizi.marko:
+                    najblizi.kolebanje = 2
+        elif relikvija.kljuc == "blago":
+            figura.kraljevic = True
+
+        kljucevi = {r.kljuc for r in figura.relikvije}
+        if (
+            not figura.marko
+            and self.MARKOVE_RELIKVIJE <= kljucevi
+            and (figura.kraljevic or "blago" in kljucevi)
+        ):
+            figura.marko = True
+
+    def kljuc_deka(self, carev_drum):
+        if carev_drum is None:
+            return None
+        return (
+            tuple(relikvija.kljuc for relikvija in carev_drum.dek),
+            carev_drum.sledeci_indeks
+        )
+
     def sortiraj_poteze(self, tabla, potezi):
         return sorted(
             potezi,
@@ -313,11 +401,19 @@ class Ai:
         return nova
 
 
-    def minimax(self,tabla,dubina,alfa,beta,maxFigura,pocetak,limit):
+    def minimax(
+        self, tabla, dubina, alfa, beta, maxFigura,
+        pocetak, limit, carev_drum=None
+    ):
         if pygame.time.get_ticks() - pocetak >= limit:
             raise TimeoutError
 
-        kljuc = (self.kljuc_stanja(tabla),dubina,maxFigura)
+        kljuc = (
+            self.kljuc_stanja(tabla),
+            self.kljuc_deka(carev_drum),
+            dubina,
+            maxFigura
+        )
 
         if kljuc in self.transposition_table:
             return self.transposition_table[kljuc]
@@ -338,11 +434,21 @@ class Ai:
                 
                 for potez in potezi:
                     nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,False,pocetak,limit)
-                    maximum = max(ocena,maximum)
-                    alfa = max(alfa, ocena)
-                    if alfa >= beta:
-                        preseceno = True
+                    for tabla_posle, dek_posle, _ in self.stanja_posle_relikvije(
+                        nova_tabla,
+                        potez.krajnji_indeks,
+                        carev_drum
+                    ):
+                        ocena = self.minimax(
+                            tabla_posle, dubina - 1, alfa, beta, False,
+                            pocetak, limit, dek_posle
+                        )
+                        maximum = max(ocena, maximum)
+                        alfa = max(alfa, ocena)
+                        if alfa >= beta:
+                            preseceno = True
+                            break
+                    if preseceno:
                         break
                 if not preseceno:
                     self.transposition_table[kljuc] = maximum
@@ -358,11 +464,21 @@ class Ai:
 
                 for potez in potezi:
                     nova_tabla,lanac = self.odigraj_na_kopiji_table(tabla,potez)
-                    ocena = self.minimax(nova_tabla,dubina-1,alfa,beta,True,pocetak,limit)
-                    beta =min(beta,ocena)
-                    minimum = min(ocena,minimum)
-                    if beta<=alfa:
-                        preseceno = True
+                    for tabla_posle, dek_posle, _ in self.stanja_posle_relikvije(
+                        nova_tabla,
+                        potez.krajnji_indeks,
+                        carev_drum
+                    ):
+                        ocena = self.minimax(
+                            tabla_posle, dubina - 1, alfa, beta, True,
+                            pocetak, limit, dek_posle
+                        )
+                        beta = min(beta, ocena)
+                        minimum = min(ocena, minimum)
+                        if beta <= alfa:
+                            preseceno = True
+                            break
+                    if preseceno:
                         break
                 if not preseceno:
                     self.transposition_table[kljuc] = minimum

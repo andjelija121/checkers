@@ -97,6 +97,10 @@ def nacrtaj_carev_drum(igra, prozor):
     naslov = font.render("ЦАРЕВ ДРУМ", True, (255, 226, 140))
     prozor.blit(naslov, (22, TABLA_VISINA + 18))
 
+    info_font = pygame.font.SysFont("arial", 17)
+    info_tekst = info_font.render("", True, BEIGE)
+    prozor.blit(info_tekst, (22, TABLA_VISINA + 92))
+
     if not relikvije:
         return
 

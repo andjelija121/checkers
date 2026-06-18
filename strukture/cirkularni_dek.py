@@ -53,3 +53,9 @@ class CirkularniDek:
 
     def sadrzaj(self):
         return list(self.dek)
+
+    def kopija(self):
+        novi = CirkularniDek(self.elementi, self.kapacitet)
+        novi.sledeci_indeks = self.sledeci_indeks
+        novi.dek = list(self.dek)
+        return novi
